@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="id" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumbung Ternak Terpadu - BUMKAL LPM PLERET</title>
+    <meta name="description" content="Aplikasi Terpadu Manajemen Peternakan Domba, Pertanian HPT, Pengolahan Pupuk Kohe & Akuntansi BUMKal Pleret">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐑</text></svg>">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#059669">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Kandang BUMKal">
+    <link rel="apple-touch-icon" href="assets/icon-192.svg">
+    
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/custom.css">
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans antialiased min-h-screen flex transition-colors duration-200">
+
+    <!-- SIDEBAR NAVIGASI (DESKTOP & RESPONSIVE DRAWER) -->
+    <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-800/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-700/80 flex flex-col justify-between transition-transform duration-300 -translate-x-full md:translate-x-0 shadow-lg md:shadow-none h-screen h-[100dvh] max-h-screen">
+        <div class="flex flex-col h-full min-h-0 overflow-hidden">
+            <!-- Logo & Brand Header -->
+            <div class="h-16 px-5 border-b border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center gap-3 cursor-pointer" onclick="App.navigate('dashboard')">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center font-extrabold text-lg shadow-md shadow-emerald-500/20 flex-shrink-0">
+                        LT
+                    </div>
+                    <div>
+                        <div class="font-extrabold text-sm text-slate-900 dark:text-white leading-tight">Lumbung Ternak</div>
+                        <div class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 tracking-wider">BUMKAL LPM PLERET</div>
+                    </div>
+                </div>
+                <!-- Close Button (Mobile Only) -->
+                <button onclick="document.getElementById('main-sidebar').classList.add('-translate-x-full')" class="md:hidden text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Navigation Links (Scrollable with Full Menus) -->
+            <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain touch-auto p-3 space-y-1 text-xs font-semibold pb-32" style="-webkit-overflow-scrolling: touch;">
+                <!-- 1. NAVIGASI UTAMA -->
+                <div class="sidebar-section-header px-3 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    NAVIGASI UTAMA
+                </div>
+                <button onclick="App.navigate('dashboard')" data-route="dashboard" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                    <span>Dashboard Analytics</span>
+                </button>
+                <button onclick="App.navigate('scan_penimbang_cepat')" data-route="scan_penimbang_cepat" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="zap" class="w-4 h-4"></i>
+                    <span>Scan Penimbang Cepat</span>
+                </button>
+                <button onclick="App.navigate('kanban')" data-route="kanban" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="check-square" class="w-4 h-4"></i>
+                    <span>Tugas Lapangan (Kanban)</span>
+                </button>
+
+                <!-- 2. PENGGEMUKAN & BREEDING -->
+                <div class="sidebar-section-header px-3 pt-3 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    PETERNAKAN & BREEDING
+                </div>
+                <button onclick="App.navigate('siklus_batch')" data-route="siklus_batch" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="package" class="w-4 h-4"></i>
+                    <span>Siklus Batch Penggemukan</span>
+                </button>
+                <button onclick="App.navigate('siklus_breeding')" data-route="siklus_breeding" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="heart" class="w-4 h-4"></i>
+                    <span>Siklus Breeding & Reproduksi</span>
+                </button>
+                <button onclick="App.navigate('master_kandang')" data-route="master_kandang" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="warehouse" class="w-4 h-4"></i>
+                    <span>Master Kandang</span>
+                </button>
+                <button onclick="App.navigate('data_ternak')" data-route="data_ternak" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="tag" class="w-4 h-4"></i>
+                    <span>Data Ternak</span>
+                </button>
+                <button onclick="App.navigate('history_timbang')" data-route="history_timbang" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="trending-up" class="w-4 h-4"></i>
+                    <span>History Timbang & ADG</span>
+                </button>
+                <button onclick="App.navigate('cetak_stiker_qr')" data-route="cetak_stiker_qr" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="qr-code" class="w-4 h-4"></i>
+                    <span>Cetak Stiker QR</span>
+                </button>
+                <button onclick="App.navigate('import_csv')" data-route="import_csv" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                    <span>Import Masal CSV</span>
+                </button>
+
+                <!-- 3. PAKAN, LIMBAH & PERTANIAN -->
+                <div class="sidebar-section-header px-3 pt-3 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    PAKAN, LIMBAH & PERTANIAN
+                </div>
+                <button onclick="App.navigate('input_pakan_harian')" data-route="input_pakan_harian" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="box" class="w-4 h-4"></i>
+                    <span>Input Pakan Harian</span>
+                </button>
+                <button onclick="App.navigate('scan_vaksin_medis')" data-route="scan_vaksin_medis" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="syringe" class="w-4 h-4"></i>
+                    <span>Scan Vaksin & Medis</span>
+                </button>
+                <button onclick="App.navigate('stok_pakan_hpp')" data-route="stok_pakan_hpp" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="package-check" class="w-4 h-4"></i>
+                    <span>Stok Pakan & HPP</span>
+                </button>
+                <button onclick="App.navigate('rekam_medis')" data-route="rekam_medis" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="file-heart" class="w-4 h-4"></i>
+                    <span>Rekam Medis</span>
+                </button>
+                <button onclick="App.navigate('pertanian')" data-route="pertanian" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="sprout" class="w-4 h-4"></i>
+                    <span>Bank Pakan HPT & Lahan</span>
+                </button>
+                <button onclick="App.navigate('limbah_organik')" data-route="limbah_organik" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="recycle" class="w-4 h-4"></i>
+                    <span>Limbah Organik Kohe</span>
+                </button>
+
+                <!-- 4. KEUANGAN BUMDES & KEMITRAAN -->
+                <div class="sidebar-section-header px-3 pt-3 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    KEUANGAN BUMDES & KEMITRAAN
+                </div>
+                <button onclick="App.navigate('buku_kas_bumdes')" data-route="buku_kas_bumdes" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                    <span>Buku Kas BUMDes</span>
+                </button>
+                <button onclick="App.navigate('skema_kemitraan')" data-route="skema_kemitraan" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="handshake" class="w-4 h-4"></i>
+                    <span>Kemitraan & Bagi Hasil</span>
+                </button>
+                <button onclick="App.navigate('laporan_rapat_evaluasi')" data-route="laporan_rapat_evaluasi" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                    <span>Laporan Rapat Evaluasi</span>
+                </button>
+                <button onclick="App.navigate('executive_dss_pades')" data-route="executive_dss_pades" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="crown" class="w-4 h-4"></i>
+                    <span>Executive DSS & PADes</span>
+                </button>
+                <button onclick="App.navigate('laporan')" data-route="laporan" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                    <span>Pusat Laporan Lengkap</span>
+                </button>
+                <button onclick="App.navigate('penjualan_ternak')" data-route="penjualan_ternak" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                    <span>Penjualan Ternak</span>
+                </button>
+                <button onclick="App.navigate('gaji_operasional')" data-route="gaji_operasional" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="banknote" class="w-4 h-4"></i>
+                    <span>Gaji & Operasional</span>
+                </button>
+
+                <!-- 5. PENGATURAN -->
+                <div class="sidebar-section-header px-3 pt-3 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    PENGATURAN
+                </div>
+                <button onclick="App.navigate('master_pengaturan')" data-route="master_pengaturan" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="sliders" class="w-4 h-4"></i>
+                    <span>Master Pengaturan Sistem</span>
+                </button>
+                <button onclick="App.navigate('bumdes_backup_purge')" data-route="bumdes_backup_purge" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="database" class="w-4 h-4"></i>
+                    <span>Cadangkan & Pulihkan Data</span>
+                </button>
+                <button onclick="App.navigate('firebase_sync')" data-route="firebase_sync" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="cloud" class="w-4 h-4 text-sky-500"></i>
+                    <span>Sinkronisasi Cloud (Firebase)</span>
+                </button>
+                <button onclick="App.navigate('master_preset_vaksin')" data-route="master_preset_vaksin" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="flask-conical" class="w-4 h-4"></i>
+                    <span>Master Preset Vaksin</span>
+                </button>
+                <button onclick="App.navigate('manajemen_user')" data-route="manajemen_user" class="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2 rounded-xl transition text-left">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    <span>Manajemen User</span>
+                </button>
+            </div>
+
+            <!-- Sidebar Footer -->
+            <div class="p-3 border-t border-slate-200/80 dark:border-slate-700/80 space-y-2 flex-shrink-0">
+                <button onclick="App.navigate('bumdes_backup_purge')" data-route="bumdes_backup_purge" class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700/50 text-xs font-semibold text-slate-600 dark:text-slate-300 transition">
+                    <i data-lucide="database" class="w-4 h-4 text-emerald-600"></i> Cadangan Database
+                </button>
+                <button id="pwa-install-btn-sidebar" onclick="App.openPwaInstallGuide()" class="hidden w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-violet-300 dark:border-violet-700 bg-violet-50 dark:bg-violet-950/40 hover:bg-violet-100 dark:hover:bg-violet-900/50 text-xs font-semibold text-violet-700 dark:text-violet-300 transition">
+                    <i data-lucide="smartphone" class="w-4 h-4"></i> 📲 Pasang di HP
+                </button>
+                <div class="px-3 py-1.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl text-[10px] text-slate-400 text-center">
+                    <b>Versi 2.6.0</b> • BKK Dana Keistimewaan DIY
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN BODY WRAPPER -->
+    <div id="main-body-wrapper" class="flex-1 flex flex-col min-w-0 transition-all duration-300">
+        <!-- PUBLIC HEADER BAR (MUKA UMUM) -->
+        <header id="public-header" class="h-16 sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 sm:px-8 flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="App.switchView('public')">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center font-extrabold text-lg shadow-md shadow-emerald-500/20 flex-shrink-0">
+                    LT
+                </div>
+                <div>
+                    <div class="font-extrabold text-sm text-slate-900 dark:text-white leading-tight">Lumbung Ternak</div>
+                    <div class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 tracking-wider">BUMKAL LPM PLERET</div>
+                </div>
+            </div>
+
+            <nav class="hidden md:flex items-center gap-6 text-xs font-bold text-slate-600 dark:text-slate-300">
+                <a href="#katalog-domba" class="hover:text-emerald-600 transition">Katalog Domba</a>
+                <a href="#cek-eartag" class="hover:text-emerald-600 transition">Cek Eartag Sehat</a>
+                <a href="#katalog-pupuk" class="hover:text-emerald-600 transition">Pupuk Organik Kohe</a>
+                <span class="text-slate-300 dark:text-slate-700">•</span>
+                <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                    <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Kalurahan Pleret, Bantul
+                </span>
+            </nav>
+
+            <div class="flex items-center gap-2 sm:gap-2.5">
+                <button id="pwa-install-btn-header" onclick="App.openPwaInstallGuide()" title="Pasang Aplikasi di HP" class="hidden px-2.5 py-1.5 rounded-xl bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border border-violet-300 dark:border-violet-700 hover:bg-violet-100 text-xs font-bold transition flex items-center gap-1">
+                    <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline text-[11px]">Pasang di HP</span>
+                </button>
+                <button onclick="App.syncFromPublicHeader()" title="Sinkronkan Data dari Cloud Firebase" class="p-2 rounded-xl text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/50 border border-sky-200 dark:border-sky-800 transition flex items-center gap-1 text-xs font-bold">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    <span class="hidden md:inline text-[11px]">Sync Cloud</span>
+                </button>
+                <button onclick="App.toggleTheme()" title="Ubah Mode Tema" class="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                    <i data-lucide="moon" class="w-4 h-4 hidden dark:block"></i>
+                    <i data-lucide="sun" class="w-4 h-4 block dark:hidden"></i>
+                </button>
+                <button onclick="App.openLoginModal()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5 active:scale-95">
+                    <i data-lucide="lock" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Login</span> Pengurus
+                </button>
+            </div>
+        </header>
+
+        <!-- ADMIN TOP HEADER BAR (MUKA PENGURUS/PETUGAS) -->
+        <header id="admin-header" class="h-16 sticky top-0 z-30 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 px-4 md:px-8 hidden items-center justify-between">
+            <div class="flex items-center gap-3">
+                <!-- Hamburger Button (Mobile) -->
+                <button onclick="document.getElementById('main-sidebar').classList.remove('-translate-x-full')" class="md:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
+
+                <!-- Location / Village Breadcrumb -->
+                <div class="hidden sm:block">
+                    <div class="flex items-center gap-1.5 text-xs text-slate-500">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600"></i>
+                        <span>Kalurahan Pleret, Kapanewon Pleret, Bantul, DIY</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header Right Controls -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Low-Stock Alert Bell -->
+                <div class="relative">
+                    <button onclick="App.toggleStockAlertDropdown()" id="header-stock-alert-btn" title="Peringatan Dini Stok Kritis" class="relative p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300 transition">
+                        <i data-lucide="bell" class="w-4 h-4"></i>
+                        <span id="header-stock-alert-badge" class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white font-black text-[10px] flex items-center justify-center animate-pulse">0</span>
+                    </button>
+                    <!-- Stock Alert Dropdown Popover -->
+                    <div id="header-stock-alert-dropdown" class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl z-50 p-4 space-y-3">
+                        <div class="flex items-center justify-between border-b pb-2 dark:border-slate-700">
+                            <span class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-500"></i> Peringatan Stok Menipis (ROP)
+                            </span>
+                            <span id="header-stock-alert-count" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">0 Kritis</span>
+                        </div>
+                        <div id="header-stock-alert-list" class="max-h-60 overflow-y-auto space-y-2 text-xs">
+                            <!-- Items injected dynamically -->
+                        </div>
+                        <div class="pt-2 border-t dark:border-slate-700 flex justify-between text-xs">
+                            <button onclick="App.navigate('stok_pakan_hpp'); document.getElementById('header-stock-alert-dropdown').classList.add('hidden')" class="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
+                                Buka Stok Pakan & HPP &rarr;
+                            </button>
+                            <button onclick="document.getElementById('header-stock-alert-dropdown').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cloud Sync Status Badge -->
+                <button onclick="App.navigate('firebase_sync')" id="header-cloud-status-btn" title="Status Sinkronisasi Cloud Firebase (Klik untuk buka konfigurasi)" class="px-2.5 py-1.5 rounded-xl border border-sky-500/30 bg-sky-50/70 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 font-bold text-xs flex items-center gap-1.5 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500" id="header-cloud-dot"></span>
+                    <i data-lucide="cloud" class="w-3.5 h-3.5"></i>
+                    <span class="hidden md:inline text-[11px]" id="header-cloud-text">Cloud Sync</span>
+                </button>
+
+                <!-- Switch to Public Button -->
+                <button onclick="App.switchView('public')" title="Lihat Muka Portal Publik" class="px-3 py-1.5 rounded-xl border border-emerald-500/40 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center gap-1.5 hover:bg-emerald-100 transition">
+                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Muka Publik</span>
+                </button>
+
+                <!-- PWA Install Button -->
+                <button id="pwa-install-btn-header" onclick="App.openPwaInstallGuide()" title="Pasang Aplikasi di HP" class="hidden px-3 py-1.5 rounded-xl border border-violet-500/40 bg-violet-50/70 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 font-bold text-xs flex items-center gap-1.5 hover:bg-violet-100 dark:hover:bg-violet-900/50 transition">
+                    <i data-lucide="smartphone" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Instal di HP</span>
+                </button>
+
+                <!-- Theme Mode Switcher -->
+                <button onclick="App.toggleTheme()" title="Ubah Mode Tema" class="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    <i data-lucide="moon" class="w-4 h-4 hidden dark:block"></i>
+                    <i data-lucide="sun" class="w-4 h-4 block dark:hidden"></i>
+                </button>
+
+                <!-- User Profile Badge (Read-Only) -->
+                <div class="flex items-center gap-2 pl-2 py-1 pr-3 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <div id="header-user-avatar" class="w-8 h-8 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-xs shadow-sm overflow-hidden">
+                        SP
+                    </div>
+                    <div class="text-left hidden sm:block">
+                        <div id="header-user-name" class="text-xs font-bold text-slate-900 dark:text-white leading-tight">H. Supardi, S.Pt.</div>
+                        <div id="header-user-role" class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Direksi Utama</div>
+                    </div>
+                </div>
+
+                <!-- Logout Button -->
+                <button onclick="App.logout()" title="Keluar / Logout" class="p-2 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- DYNAMIC MAIN CONTENT VIEWPORT -->
+        <main class="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
+            <div id="main-content-area">
+                <!-- Content injected dynamically via app.js -->
+            </div>
+        </main>
+    </div>
+
+    <!-- GLOBAL MODAL OVERLAY & CONTAINER -->
+    <div id="global-modal-overlay" class="fixed inset-0 z-[999] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div id="global-modal-container" class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-xl max-h-[92vh] overflow-y-auto transform transition-all custom-scroll">
+            <!-- Modal Content Injected Dynamically -->
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- FIREBASE COMPAT SDK (CDN with Offline-Safe Fallback) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <!-- APPLICATION JAVASCRIPT BUNDLE IN EXACT ORDER -->
+    <script src="js/utils/qrcode.min.js"></script>
+    <script src="js/utils/barcode.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/utils/export_import.js"></script>
+    <script src="js/modules/portal_publik.js"></script>
+    <script src="js/modules/laporan.js"></script>
+    <script src="js/modules/dashboard.js"></script>
+    <script src="js/modules/domba.js"></script>
+    <script src="js/modules/penimbang_cepat.js"></script>
+    <script src="js/modules/penggemukan.js"></script>
+    <script src="js/modules/pakan_kesehatan.js"></script>
+    <script src="js/modules/keuangan_bumdes.js"></script>
+    <script src="js/modules/pengaturan.js"></script>
+    <script src="js/modules/pertanian.js"></script>
+    <script src="js/modules/limbah.js"></script>
+    <script src="js/modules/kanban.js"></script>
+    <script src="js/modules/breeding.js"></script>
+    <script src="js/modules/sdm_agenda.js"></script>
+    <script src="js/modules/keuangan.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
