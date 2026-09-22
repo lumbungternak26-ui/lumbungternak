@@ -35,7 +35,10 @@ const STORAGE_KEYS = {
     BREEDING_KAWIN: "kandang_breeding_kawin_v2",
     BREEDING_KELAHIRAN: "kandang_breeding_kelahiran_v2",
     BREEDING_KEMATIAN: "kandang_breeding_kematian_v2",
-    KEMITRAAN: "kandang_kemitraan_v2"
+    KEMITRAAN: "kandang_kemitraan_v2",
+    BERITA_ACARA: "kandang_berita_acara_v2",
+    MUTASI_SEKAT: "kandang_mutasi_sekat_v2",
+    HPP_CONFIG: "kandang_hpp_config_v2"
 };
 
 const Store = {
@@ -92,6 +95,8 @@ const Store = {
         }
         this.getSuplier();
         this.getRolePermissions();
+        this.syncMortalitasData();
+        this.syncSekatOccupancy();
     },
 
     // Seed Data Lengkap & Realistis
@@ -651,7 +656,11 @@ const Store = {
             asalTernak: d.asalTernak || defaultAsal[idx % defaultAsal.length]
         }));
     },
-    saveDomba(l) { localStorage.setItem(STORAGE_KEYS.DOMBA, JSON.stringify(l)); this.triggerAutoSync(); },
+    saveDomba(l) { 
+        localStorage.setItem(STORAGE_KEYS.DOMBA, JSON.stringify(l)); 
+        this.syncSekatOccupancy();
+        this.triggerAutoSync(); 
+    },
     addDomba(d) { const l = this.getDomba(); l.unshift(d); this.saveDomba(l); this.addLog(`Tambah domba: ${d.eartag} (${d.nama})`); },
     updateDomba(id, f) {
         const l = this.getDomba();
@@ -696,8 +705,79 @@ const Store = {
     updateBatch(id, f) { const l = this.getBatchesPenggemukan(); const i = l.findIndex(b => b.id === id); if (i>=0) { l[i] = {...l[i], ...f}; this.saveBatchesPenggemukan(l); this.addLog(`Update batch: ${l[i].nama}`); } },
     deleteBatch(id) { const l = this.getBatchesPenggemukan().filter(b => b.id !== id); this.saveBatchesPenggemukan(l); this.addLog(`Hapus batch: ${id}`); },
 
+    defaultMasterKandang() {
+        return [
+            {
+                id: "knd-a",
+                nama: "Kandang A (Pejantan & Fattening)",
+                lokasi: "Sektor Barat - Fasilitas Kedaton",
+                tipeKandang: "Kandang Panggung Kayu Jati / Bambu",
+                kapasitasMaks: 24,
+                terisi: 5,
+                jumlahSekat: 6,
+                ventilasi: "Sirkulasi Alami + Blower Exhaust",
+                suhuRataRata: "28°C",
+                kebersihan: "Sangat Bersih (Dibersihkan 2x sehari)",
+                sekatList: [
+                    { nomor: "Sekat 01", kapasitas: 2, terisi: 1, eartags: ["DMB-001"] },
+                    { nomor: "Sekat 02", kapasitas: 2, terisi: 1, eartags: ["DMB-002"] },
+                    { nomor: "Sekat 03", kapasitas: 6, terisi: 2, eartags: ["DMB-005", "DMB-006"] },
+                    { nomor: "Sekat 04", kapasitas: 6, terisi: 1, eartags: ["DMB-008"] },
+                    { nomor: "Sekat 05", kapasitas: 4, terisi: 0, eartags: [] },
+                    { nomor: "Sekat 06", kapasitas: 4, terisi: 0, eartags: [] }
+                ]
+            },
+            {
+                id: "knd-b",
+                nama: "Kandang B (Koloni Induk & Breeding)",
+                lokasi: "Sektor Timur - Fasilitas Kedaton",
+                tipeKandang: "Kandang Panggung Sekat Melahirkan",
+                kapasitasMaks: 20,
+                terisi: 6,
+                jumlahSekat: 5,
+                ventilasi: "Sirkulasi Bebas Terbuka",
+                suhuRataRata: "27.5°C",
+                kebersihan: "Sangat Bersih (Panggung kering)",
+                sekatList: [
+                    { nomor: "Sekat 01", kapasitas: 4, terisi: 1, eartags: ["DMB-003"] },
+                    { nomor: "Sekat 02", kapasitas: 4, terisi: 1, eartags: ["DMB-004"] },
+                    { nomor: "Sekat 03", kapasitas: 4, terisi: 3, eartags: ["DMB-007", "DMB-011", "DMB-012"] },
+                    { nomor: "Sekat 04", kapasitas: 4, terisi: 1, eartags: ["DMB-009"] },
+                    { nomor: "Sekat 05", kapasitas: 4, terisi: 0, eartags: [] }
+                ]
+            },
+            {
+                id: "knd-c",
+                nama: "Kandang C (Karantina & Observasi Medis)",
+                lokasi: "Sektor Utara (Terisolir 15m dari Kandang Utama)",
+                tipeKandang: "Kandang Panggung Sekat Tunggal Tertutup",
+                kapasitasMaks: 8,
+                terisi: 1,
+                jumlahSekat: 4,
+                ventilasi: "Kawat Ram Antiserangga",
+                suhuRataRata: "28.5°C",
+                kebersihan: "Disemprot Desinfektan Rutin",
+                sekatList: [
+                    { nomor: "Sekat 01", kapasitas: 2, terisi: 1, eartags: ["DMB-010"] },
+                    { nomor: "Sekat 02", kapasitas: 2, terisi: 0, eartags: [] },
+                    { nomor: "Sekat 03", kapasitas: 2, terisi: 0, eartags: [] },
+                    { nomor: "Sekat 04", kapasitas: 2, terisi: 0, eartags: [] }
+                ]
+            }
+        ];
+    },
+
     // Master Kandang
-    getMasterKandang() { return this.safeGet(STORAGE_KEYS.MASTER_KANDANG, []); },
+    getMasterKandang() {
+        const raw = localStorage.getItem(STORAGE_KEYS.MASTER_KANDANG);
+        const list = this.safeGet(STORAGE_KEYS.MASTER_KANDANG, null);
+        if (raw === null || list === null || !Array.isArray(list) || list.length === 0) {
+            const defaults = this.defaultMasterKandang();
+            this.saveMasterKandang(defaults);
+            return defaults;
+        }
+        return list;
+    },
     saveMasterKandang(k) { localStorage.setItem(STORAGE_KEYS.MASTER_KANDANG, JSON.stringify(k)); this.triggerAutoSync(); },
     addMasterKandang(k) { const l = this.getMasterKandang(); l.push(k); this.saveMasterKandang(l); this.addLog(`Tambah kandang: ${k.nama}`); },
     updateMasterKandang(id, f) { const l = this.getMasterKandang(); const i = l.findIndex(k => k.id === id); if (i>=0) { l[i] = {...l[i], ...f}; this.saveMasterKandang(l); this.addLog(`Update kandang: ${l[i].nama}`); } },
@@ -787,22 +867,47 @@ const Store = {
     },
 
     syncSekatOccupancy() {
-        const kandangList = this.safeGet(STORAGE_KEYS.MASTER_KANDANG, []);
+        const kandangList = this.getMasterKandang();
         const dombaList = this.getDomba().filter(d => d.status !== "Mati" && d.status !== "Terjual");
         let changed = false;
 
+        // Helper pencocokan kandang domba dengan master kandang
+        const isDombaMatchKandang = (d, k) => {
+            if (!d || !k) return false;
+            const dK = (d.kandang || '').trim().toLowerCase();
+            const kName = (k.nama || '').trim().toLowerCase();
+            const kId = (k.id || '').trim().toLowerCase();
+            const kKey = kName.split('(')[0].trim(); // misal "kandang a"
+            const dKey = dK.split('(')[0].trim();
+
+            if (!dK) return false;
+            if (dK === kName || (kId && dK === kId)) return true;
+            if (kKey && (dK === kKey || dK.startsWith(kKey) || dK.includes(kKey))) return true;
+            if (dKey && (kName === dKey || kName.startsWith(dKey) || kName.includes(dKey))) return true;
+            if (kName.includes(dK) || dK.includes(kName)) return true;
+            return false;
+        };
+
+        // Helper pencocokan sekat (misal "Sekat 01" vs "Sekat 1")
+        const isSekatMatch = (dSekat, sNomor) => {
+            if (!dSekat || !sNomor) return false;
+            const ds = dSekat.trim().toLowerCase();
+            const sn = sNomor.trim().toLowerCase();
+            if (ds === sn) return true;
+            const numD = ds.replace(/\D/g, '');
+            const numS = sn.replace(/\D/g, '');
+            if (numD && numS && parseInt(numD) === parseInt(numS)) {
+                return true;
+            }
+            return false;
+        };
+
         kandangList.forEach(k => {
-            let totalKandangTerisi = 0;
-            const kandangKey = (k.nama || '').split('(')[0].trim().toLowerCase();
-            
+            const dombaInThisKandang = dombaList.filter(d => isDombaMatchKandang(d, k));
+
             if (Array.isArray(k.sekatList)) {
                 k.sekatList.forEach(s => {
-                    const sheepInSekat = dombaList.filter(d => {
-                        const dKandang = (d.kandang || '').toLowerCase();
-                        const matchKandang = dKandang.includes(kandangKey) || (k.id && dKandang.includes(k.id.toLowerCase()));
-                        const matchSekat = (d.sekat || '').trim().toLowerCase() === (s.nomor || '').trim().toLowerCase();
-                        return matchKandang && matchSekat;
-                    });
+                    const sheepInSekat = dombaInThisKandang.filter(d => isSekatMatch(d.sekat, s.nomor));
                     const count = sheepInSekat.length;
                     const tags = sheepInSekat.map(d => d.eartag);
                     if (s.terisi !== count || JSON.stringify(s.eartags) !== JSON.stringify(tags)) {
@@ -810,13 +915,23 @@ const Store = {
                         s.eartags = tags;
                         changed = true;
                     }
-                    totalKandangTerisi += count;
                 });
             }
 
-            if (k.terisi !== totalKandangTerisi) {
-                k.terisi = totalKandangTerisi;
+            // Kapasitas terisi kandang = seluruh domba aktif yang berada di kandang ini
+            const totalTerisi = dombaInThisKandang.length;
+            if (k.terisi !== totalTerisi) {
+                k.terisi = totalTerisi;
                 changed = true;
+            }
+
+            // Pastikan kapasitasMaks tidak nol jika memiliki sekat
+            if (Array.isArray(k.sekatList) && k.sekatList.length > 0) {
+                const totalKapasitas = k.sekatList.reduce((sum, s) => sum + (s.kapasitas || 0), 0);
+                if (k.kapasitasMaks !== totalKapasitas && totalKapasitas > 0) {
+                    k.kapasitasMaks = totalKapasitas;
+                    changed = true;
+                }
             }
         });
 
@@ -1029,14 +1144,94 @@ const Store = {
         const d1 = new Date(prevTimbang.tgl);
         const d2 = new Date(tgl);
         const diffDays = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)));
-        const diffWeightKg = bobotBaru - prevTimbang.bobot;
+        const roundedWeight = parseFloat(parseFloat(bobotBaru).toFixed(2));
+        const prevWeight = parseFloat(Number(prevTimbang.bobot || 0).toFixed(2));
+        const diffWeightKg = Math.round((roundedWeight - prevWeight) * 100) / 100;
         const adgGramPerHari = Math.round((diffWeightKg * 1000) / diffDays);
 
-        d.riwayatTimbang.push({ tgl, bobot: parseFloat(bobotBaru), catatan });
+        d.riwayatTimbang.push({ tgl, bobot: roundedWeight, catatan });
         d.adg = adgGramPerHari;
+        if (d.riwayatTimbang.length > 0) {
+            d.bobotTerkini = roundedWeight;
+            d.berat = roundedWeight;
+        }
         this.saveDomba(list);
-        this.addLog(`Timbang ${d.eartag}: ${bobotBaru} kg (ADG: ${adgGramPerHari} g/hari)`);
+        this.addLog(`Timbang ${d.eartag}: ${roundedWeight.toFixed(2)} kg (ADG: ${adgGramPerHari} g/hari)`);
         return { domba: d, adg: adgGramPerHari, diffWeightKg };
+    },
+
+    updateRiwayatTimbang(dombaId, indexTimbang, newTgl, newBobot, newCatatan) {
+        const list = this.getDomba();
+        const d = list.find(item => item.id === dombaId || item.eartag === dombaId);
+        if (!d || !Array.isArray(d.riwayatTimbang)) return false;
+
+        const idx = parseInt(indexTimbang);
+        if (isNaN(idx) || idx < 0 || idx >= d.riwayatTimbang.length) return false;
+
+        const roundedWeight = parseFloat(parseFloat(newBobot).toFixed(2));
+        d.riwayatTimbang[idx] = {
+            ...d.riwayatTimbang[idx],
+            tgl: newTgl || d.riwayatTimbang[idx].tgl,
+            bobot: roundedWeight,
+            catatan: newCatatan !== undefined ? newCatatan : (d.riwayatTimbang[idx].catatan || "")
+        };
+
+        // Sort chronologically
+        d.riwayatTimbang.sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
+
+        // Recalculate ADG across the timeline
+        if (d.riwayatTimbang.length >= 2) {
+            const last = d.riwayatTimbang[d.riwayatTimbang.length - 1];
+            const prev = d.riwayatTimbang[d.riwayatTimbang.length - 2];
+            const diffDays = Math.max(1, Math.round((new Date(last.tgl) - new Date(prev.tgl)) / (1000 * 60 * 60 * 24)));
+            const diffWeightKg = Math.round((last.bobot - prev.bobot) * 100) / 100;
+            d.adg = Math.round((diffWeightKg * 1000) / diffDays);
+        } else {
+            d.adg = 0;
+        }
+
+        // Sync latest & initial weights
+        if (d.riwayatTimbang.length > 0) {
+            d.bobotAwal = d.riwayatTimbang[0].bobot;
+            d.bobotTerkini = d.riwayatTimbang[d.riwayatTimbang.length - 1].bobot;
+            d.berat = d.bobotTerkini;
+        }
+
+        this.saveDomba(list);
+        this.addLog(`Ubah data timbang ${d.eartag}: ${roundedWeight.toFixed(2)} kg (ADG: ${d.adg || 0} g/hari)`);
+        return true;
+    },
+
+    deleteRiwayatTimbang(dombaId, indexTimbang) {
+        const list = this.getDomba();
+        const d = list.find(item => item.id === dombaId || item.eartag === dombaId);
+        if (!d || !Array.isArray(d.riwayatTimbang)) return false;
+
+        const idx = parseInt(indexTimbang);
+        if (isNaN(idx) || idx < 0 || idx >= d.riwayatTimbang.length) return false;
+
+        const removed = d.riwayatTimbang.splice(idx, 1)[0];
+
+        // Recalculate ADG
+        if (d.riwayatTimbang.length >= 2) {
+            const last = d.riwayatTimbang[d.riwayatTimbang.length - 1];
+            const prev = d.riwayatTimbang[d.riwayatTimbang.length - 2];
+            const diffDays = Math.max(1, Math.round((new Date(last.tgl) - new Date(prev.tgl)) / (1000 * 60 * 60 * 24)));
+            const diffWeightKg = Math.round((last.bobot - prev.bobot) * 100) / 100;
+            d.adg = Math.round((diffWeightKg * 1000) / diffDays);
+        } else {
+            d.adg = 0;
+        }
+
+        if (d.riwayatTimbang.length > 0) {
+            d.bobotAwal = d.riwayatTimbang[0].bobot;
+            d.bobotTerkini = d.riwayatTimbang[d.riwayatTimbang.length - 1].bobot;
+            d.berat = d.bobotTerkini;
+        }
+
+        this.saveDomba(list);
+        this.addLog(`Hapus riwayat timbang ${d.eartag}: ${removed ? removed.bobot : ''} kg`);
+        return true;
     },
 
     addRekamMedis(dombaId, record) {
@@ -1360,7 +1555,10 @@ const Store = {
     getStokPakan() { return this.safeGet(STORAGE_KEYS.STOK_PAKAN, []); },
     saveStokPakan(s) { localStorage.setItem(STORAGE_KEYS.STOK_PAKAN, JSON.stringify(s)); this.triggerAutoSync(); },
     getKoheHarian() { return this.safeGet(STORAGE_KEYS.KOHE_HARIAN, []); },
-    addKoheHarian(k) { const l = this.getKoheHarian(); l.unshift(k); localStorage.setItem(STORAGE_KEYS.KOHE_HARIAN, JSON.stringify(l)); this.triggerAutoSync(); },
+    saveKoheHarian(l) { localStorage.setItem(STORAGE_KEYS.KOHE_HARIAN, JSON.stringify(l)); this.triggerAutoSync(); },
+    addKoheHarian(k) { const l = this.getKoheHarian(); l.unshift(k); this.saveKoheHarian(l); },
+    updateKoheHarian(idx, fields) { const l = this.getKoheHarian(); if (idx >= 0 && idx < l.length) { l[idx] = { ...l[idx], ...fields }; this.saveKoheHarian(l); this.addLog(`Update log kohe tgl ${fields.tgl || l[idx].tgl}`); } },
+    deleteKoheHarian(idx) { const l = this.getKoheHarian(); if (idx >= 0 && idx < l.length) { l.splice(idx, 1); this.saveKoheHarian(l); } },
     getBatchLimbah() { return this.safeGet(STORAGE_KEYS.BATCH_LIMBAH, []); },
     saveBatchLimbah(b) { localStorage.setItem(STORAGE_KEYS.BATCH_LIMBAH, JSON.stringify(b)); this.triggerAutoSync(); },
     addBatchLimbah(b) {
@@ -2311,9 +2509,12 @@ const Store = {
     defaultRolePermissions() {
         const allMenus = [
             "dashboard", "scan_penimbang_cepat", "kanban", "siklus_batch", "siklus_breeding",
+            "manajemen_sapih", "paspor_skkh",
             "master_kandang", "data_ternak", "history_timbang", "cetak_stiker_qr", "import_csv",
             "input_pakan_harian", "scan_vaksin_medis", "stok_pakan_hpp", "rekam_medis",
-            "pertanian", "limbah_organik", "limbah", "buku_kas_bumdes", "skema_kemitraan",
+            "pertanian", "limbah_organik", "limbah", "buku_kas_bumdes", 
+            "hpp_unit_costing", "berita_acara_ternak",
+            "skema_kemitraan",
             "laporan_rapat_evaluasi", "executive_dss_pades", "laporan", "penjualan_ternak",
             "gaji_operasional", "master_pengaturan", "bumdes_backup_purge",
             "firebase_sync", "master_preset_vaksin", "manajemen_user"
@@ -2333,8 +2534,8 @@ const Store = {
                 label: "Pemerintah & Pengawas",
                 deskripsi: "Lurah Pleret, Pamong Kalurahan, BPKal, dan Dewan Pengawas Lembaga.",
                 allowedMenus: [
-                    "dashboard", "siklus_breeding", "master_kandang", "data_ternak", "history_timbang",
-                    "rekam_medis", "pertanian", "limbah_organik", "buku_kas_bumdes", "skema_kemitraan",
+                    "dashboard", "siklus_breeding", "manajemen_sapih", "paspor_skkh", "master_kandang", "data_ternak", "history_timbang",
+                    "rekam_medis", "pertanian", "limbah_organik", "buku_kas_bumdes", "hpp_unit_costing", "berita_acara_ternak", "skema_kemitraan",
                     "laporan_rapat_evaluasi", "executive_dss_pades", "laporan", "penjualan_ternak", "gaji_operasional"
                 ],
                 canCreate: false,
@@ -2346,7 +2547,7 @@ const Store = {
                 label: "Anak Kandang & Operator Lapangan",
                 deskripsi: "Petugas Pemeliharaan, Paramedik Hewan, Operator Pakan & Limbah Kohe.",
                 allowedMenus: [
-                    "dashboard", "scan_penimbang_cepat", "kanban", "siklus_batch", "siklus_breeding",
+                    "dashboard", "scan_penimbang_cepat", "kanban", "siklus_batch", "siklus_breeding", "manajemen_sapih", "paspor_skkh",
                     "master_kandang", "data_ternak", "history_timbang", "cetak_stiker_qr",
                     "input_pakan_harian", "scan_vaksin_medis", "stok_pakan_hpp", "rekam_medis",
                     "pertanian", "limbah_organik"
@@ -2690,55 +2891,309 @@ const Store = {
         return true;
     },
 
+    // --- SINKRONISASI MORTALITAS & BERITA ACARA TERPADU ---
+    syncMortalitasData() {
+        const baList = this.safeGet(STORAGE_KEYS.BERITA_ACARA, []);
+        let matiList = this.safeGet(STORAGE_KEYS.BREEDING_KEMATIAN, []);
+        const dombaList = this.getDomba();
+        let changed = false;
+
+        // 1. Sinkronisasi dari Berita Acara (Kematian/Afkir) -> Breeding Kematian
+        baList.forEach(ba => {
+            const tipe = (ba.tipeKejadian || '').toLowerCase();
+            const isDeath = tipe.includes('kematian') || tipe.includes('mati');
+            const isAfkir = tipe.includes('afkir');
+
+            if (isDeath || isAfkir) {
+                let existing = matiList.find(m => m.beritaAcaraId === ba.id || (m.eartag && m.eartag === ba.eartag && m.tglKematian === ba.tglKematian));
+                if (!existing) {
+                    const newMati = {
+                        id: "dth-" + (ba.id || Date.now()),
+                        dombaId: ba.dombaId || "",
+                        eartag: ba.eartag || "",
+                        nama: ba.nama || "",
+                        ras: ba.ras || "",
+                        kategoriTernak: ba.kategoriTernak || ba.kategori || (isAfkir ? "Afkir" : "Ternak"),
+                        tglKematian: ba.tglKematian || ba.tglSurat || new Date().toISOString().split('T')[0],
+                        jamKematian: ba.jamKematian || "07:00 WIB",
+                        penyebab: ba.penyebab || "Kematian Alami",
+                        tindakanBangkai: ba.tindakanBangkai || "Penguburan Biosecurity Sesuai SOP",
+                        petugas: ba.saksi1Nama || ba.pemeriksa || "Paramedik Veteriner",
+                        catatan: ba.catatan || "",
+                        beritaAcaraId: ba.id,
+                        nomorSurat: ba.nomorSurat || "",
+                        tipeKejadian: ba.tipeKejadian || (isAfkir ? "Afkir" : "Kematian Alami"),
+                        createdAt: ba.createdAt || new Date().toISOString()
+                    };
+                    matiList.unshift(newMati);
+                    changed = true;
+                } else {
+                    if (!existing.beritaAcaraId || !existing.nomorSurat) {
+                        existing.beritaAcaraId = ba.id;
+                        existing.nomorSurat = ba.nomorSurat;
+                        existing.tipeKejadian = ba.tipeKejadian;
+                        changed = true;
+                    }
+                }
+
+                // Sinkronkan status di Master Domba
+                const dIdx = dombaList.findIndex(d => (ba.dombaId && d.id === ba.dombaId) || (ba.eartag && d.eartag === ba.eartag));
+                if (dIdx >= 0) {
+                    const targetStatus = isAfkir ? "Afkir" : "Mati";
+                    if (dombaList[dIdx].status !== targetStatus || !dombaList[dIdx].beritaAcaraId) {
+                        dombaList[dIdx].status = targetStatus;
+                        dombaList[dIdx].tglMati = ba.tglKematian || ba.tglSurat;
+                        dombaList[dIdx].penyebabMati = ba.penyebab;
+                        dombaList[dIdx].beritaAcaraId = ba.id;
+                        dombaList[dIdx].nomorSuratBA = ba.nomorSurat;
+                    }
+                }
+            }
+        });
+
+        // 2. Sinkronisasi dari Domba berstatus Mati/Afkir -> Breeding Kematian & Berita Acara
+        dombaList.filter(d => d.status === "Mati" || d.status === "Afkir").forEach(d => {
+            let existingMati = matiList.find(m => (m.dombaId && m.dombaId === d.id) || (m.eartag && m.eartag === d.eartag));
+            if (!existingMati) {
+                let existingBa = baList.find(b => (b.dombaId && b.dombaId === d.id) || (b.eartag && b.eartag === d.eartag));
+                if (!existingBa) {
+                    const year = new Date().getFullYear();
+                    const count = baList.length + 1;
+                    const noFormatted = String(count).padStart(3, '0');
+                    const romanMonths = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+                    const curMonth = romanMonths[new Date().getMonth()];
+                    existingBa = {
+                        id: "ba-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+                        nomorSurat: `${noFormatted}/BA-KMT/BUMKAL-LPM/PLT/${curMonth}/${year}`,
+                        tglSurat: d.tglMati || new Date().toISOString().split('T')[0],
+                        tglKematian: d.tglMati || new Date().toISOString().split('T')[0],
+                        jamKematian: "07:00 WIB",
+                        dombaId: d.id,
+                        eartag: d.eartag,
+                        nama: d.nama || "",
+                        ras: d.ras || "",
+                        kelamin: d.kelamin || "",
+                        kandang: d.kandang || "",
+                        sekat: d.sekat || "",
+                        bobotTerakhir: d.bobotTerkini || d.berat || 0,
+                        nilaiBukuAset: d.hargaBeli || 0,
+                        tipeKejadian: d.status === "Afkir" ? "Afkir" : "Kematian Alami",
+                        penyebab: d.penyebabMati || "Kondisi fisik menurun / komplikasi",
+                        tindakanBangkai: "Penguburan Biosecurity Sesuai SOP",
+                        lokasiKubur: "Kompleks Pembuangan Limbah Kandang",
+                        saksi1Nama: "Wahyu Pratama, A.Md.",
+                        saksi1Jabatan: "Kepala Kandang",
+                        saksi2Nama: "Tri Haryanto",
+                        saksi2Jabatan: "Staf Kandang",
+                        mengetahuiNama: "H. Supardi, S.Pt.",
+                        mengetahuiJabatan: "Direktur Utama BUMKal LPM Pleret",
+                        fotoBukti: "",
+                        catatan: "Sinkronisasi otomatis status ternak Master Domba",
+                        createdAt: new Date().toISOString()
+                    };
+                    baList.unshift(existingBa);
+                    this.saveBeritaAcara(baList);
+                }
+
+                existingMati = {
+                    id: "dth-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+                    dombaId: d.id,
+                    eartag: d.eartag,
+                    nama: d.nama || "",
+                    ras: d.ras || "",
+                    kategoriTernak: d.kategori || "Ternak",
+                    tglKematian: d.tglMati || existingBa.tglKematian || new Date().toISOString().split('T')[0],
+                    jamKematian: existingBa.jamKematian || "07:00 WIB",
+                    penyebab: d.penyebabMati || existingBa.penyebab || "Sakit",
+                    tindakanBangkai: existingBa.tindakanBangkai || "Dikubur Sesuai SOP Biosecurity",
+                    petugas: existingBa.saksi1Nama || "Paramedik Veteriner",
+                    catatan: d.catatan || existingBa.catatan || "",
+                    beritaAcaraId: existingBa.id,
+                    nomorSurat: existingBa.nomorSurat,
+                    tipeKejadian: existingBa.tipeKejadian || "Kematian",
+                    createdAt: existingBa.createdAt || new Date().toISOString()
+                };
+                matiList.unshift(existingMati);
+                d.beritaAcaraId = existingBa.id;
+                d.nomorSuratBA = existingBa.nomorSurat;
+                changed = true;
+            }
+        });
+
+        // 3. Pastikan setiap entri matiList memiliki Berita Acara tertaut
+        matiList.forEach(m => {
+            if (!m.beritaAcaraId) {
+                let existingBa = baList.find(b => (b.dombaId && b.dombaId === m.dombaId) || (b.eartag && b.eartag === m.eartag));
+                if (!existingBa) {
+                    const year = new Date().getFullYear();
+                    const count = baList.length + 1;
+                    const noFormatted = String(count).padStart(3, '0');
+                    const romanMonths = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+                    const curMonth = romanMonths[new Date().getMonth()];
+                    const d = dombaList.find(item => item.eartag === m.eartag || item.id === m.dombaId) || {};
+                    existingBa = {
+                        id: "ba-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+                        nomorSurat: `${noFormatted}/BA-KMT/BUMKAL-LPM/PLT/${curMonth}/${year}`,
+                        tglSurat: m.tglKematian || new Date().toISOString().split('T')[0],
+                        tglKematian: m.tglKematian || new Date().toISOString().split('T')[0],
+                        jamKematian: m.jamKematian || "07:00 WIB",
+                        dombaId: m.dombaId || d.id || "",
+                        eartag: m.eartag,
+                        nama: m.nama || d.nama || "",
+                        ras: m.ras || d.ras || "",
+                        kelamin: d.kelamin || "Jantan",
+                        kandang: d.kandang || m.kandang || "Kandang Breeding",
+                        sekat: d.sekat || m.sekat || "Sekat Bersalin",
+                        bobotTerakhir: d.bobotTerkini || d.berat || 0,
+                        nilaiBukuAset: d.hargaBeli || 0,
+                        tipeKejadian: m.tipeKejadian || (m.kategoriTernak === "Afkir" ? "Afkir" : "Kematian Alami"),
+                        penyebab: m.penyebab || "Kematian Alami",
+                        tindakanBangkai: m.tindakanBangkai || "Penguburan Biosecurity Sesuai SOP",
+                        lokasiKubur: "Kompleks Pembuangan Limbah Kandang",
+                        saksi1Nama: m.petugas || "Wahyu Pratama, A.Md.",
+                        saksi1Jabatan: "Kepala Kandang",
+                        saksi2Nama: "Tri Haryanto",
+                        saksi2Jabatan: "Staf Kandang",
+                        mengetahuiNama: "H. Supardi, S.Pt.",
+                        mengetahuiJabatan: "Direktur Utama BUMKal LPM Pleret",
+                        fotoBukti: "",
+                        catatan: m.catatan || "Sinkronisasi otomatis dari Log Mortalitas",
+                        createdAt: m.createdAt || new Date().toISOString()
+                    };
+                    baList.unshift(existingBa);
+                    this.saveBeritaAcara(baList);
+                }
+                m.beritaAcaraId = existingBa.id;
+                m.nomorSurat = existingBa.nomorSurat;
+                changed = true;
+            }
+        });
+
+        if (changed) {
+            localStorage.setItem(STORAGE_KEYS.BREEDING_KEMATIAN, JSON.stringify(matiList));
+            this.saveDomba(dombaList);
+        }
+
+        return matiList;
+    },
+
     getBreedingKematian() {
         const raw = localStorage.getItem(STORAGE_KEYS.BREEDING_KEMATIAN);
-        const list = this.safeGet(STORAGE_KEYS.BREEDING_KEMATIAN, null);
+        let list = this.safeGet(STORAGE_KEYS.BREEDING_KEMATIAN, null);
         if (raw === null || list === null) {
-            return this.defaultBreedingKematian();
+            list = this.defaultBreedingKematian();
+            this.saveBreedingKematian(list);
         }
-        return list;
+        return this.syncMortalitasData();
     },
+
     saveBreedingKematian(list) {
         localStorage.setItem(STORAGE_KEYS.BREEDING_KEMATIAN, JSON.stringify(list));
         this.triggerAutoSync();
     },
+
     addBreedingKematian(data) {
-        const list = this.getBreedingKematian();
+        let baItem = null;
+        if (data.terbitkanBA !== false) {
+            const dombaList = this.getDomba();
+            const d = dombaList.find(item => item.eartag === data.eartag || item.id === data.dombaId) || {};
+            baItem = this.addBeritaAcara({
+                dombaId: data.dombaId || d.id || "",
+                eartag: data.eartag || "",
+                nama: data.nama || d.nama || "",
+                ras: data.ras || d.ras || "",
+                kelamin: data.kelamin || d.kelamin || "",
+                kandang: data.kandang || d.kandang || "",
+                sekat: data.sekat || d.sekat || "",
+                bobotTerakhir: data.bobotTerakhir || d.bobotTerkini || d.berat || 0,
+                nilaiBukuAset: data.nilaiBukuAset || d.hargaBeli || 0,
+                tipeKejadian: data.tipeKejadian || (data.kategoriTernak === 'Afkir' ? 'Afkir' : 'Kematian Alami'),
+                tglKematian: data.tglKematian || new Date().toISOString().split('T')[0],
+                jamKematian: data.jamKematian || "07:00 WIB",
+                penyebab: data.penyebab || "Sakit",
+                tindakanBangkai: data.tindakanBangkai || "Penguburan Biosecurity Sesuai SOP",
+                lokasiKubur: data.lokasiKubur || "Kompleks Pembuangan Limbah Kandang",
+                saksi1Nama: data.saksi1Nama || data.petugas || "Wahyu Pratama, A.Md.",
+                saksi1Jabatan: data.saksi1Jabatan || "Kepala Kandang & Paramedik Veteriner",
+                saksi2Nama: data.saksi2Nama || "Tri Haryanto",
+                saksi2Jabatan: data.saksi2Jabatan || "Staf Logistik Kandang",
+                mengetahuiNama: data.mengetahuiNama || "H. Supardi, S.Pt.",
+                mengetahuiJabatan: data.mengetahuiJabatan || "Direktur Utama BUMKal LPM Pleret",
+                fotoBukti: data.fotoBukti || "",
+                catatan: data.catatan || "",
+                updateStatusDomba: true
+            }, true /* skip recursive sync */);
+        }
+
+        const list = this.safeGet(STORAGE_KEYS.BREEDING_KEMATIAN, []);
         const item = {
             id: data.id || "dth-" + Date.now(),
-            dombaId: data.dombaId || "",
-            eartag: data.eartag || "",
-            kategoriTernak: data.kategoriTernak || "Cempe",
-            tglKematian: data.tglKematian || new Date().toISOString().split('T')[0],
-            penyebab: data.penyebab || "Sakit",
-            tindakanBangkai: data.tindakanBangkai || "Dikubur Sesuai SOP Biosecurity",
-            petugas: data.petugas || (this.getCurrentUser()?.nama || "Petugas"),
+            dombaId: data.dombaId || (baItem ? baItem.dombaId : ""),
+            eartag: data.eartag || (baItem ? baItem.eartag : ""),
+            nama: data.nama || (baItem ? baItem.nama : ""),
+            ras: data.ras || (baItem ? baItem.ras : ""),
+            kategoriTernak: data.kategoriTernak || (baItem ? baItem.tipeKejadian : "Ternak"),
+            tglKematian: data.tglKematian || (baItem ? baItem.tglKematian : new Date().toISOString().split('T')[0]),
+            jamKematian: data.jamKematian || (baItem ? baItem.jamKematian : "07:00 WIB"),
+            penyebab: data.penyebab || (baItem ? baItem.penyebab : "Sakit"),
+            tindakanBangkai: data.tindakanBangkai || (baItem ? baItem.tindakanBangkai : "Penguburan Biosecurity Sesuai SOP"),
+            petugas: data.petugas || data.saksi1Nama || (this.getCurrentUser()?.nama || "Petugas"),
             catatan: data.catatan || "",
+            beritaAcaraId: baItem ? baItem.id : (data.beritaAcaraId || ""),
+            nomorSurat: baItem ? baItem.nomorSurat : (data.nomorSurat || ""),
+            tipeKejadian: data.tipeKejadian || (baItem ? baItem.tipeKejadian : "Kematian"),
             createdAt: new Date().toISOString()
         };
         list.unshift(item);
         this.saveBreedingKematian(list);
 
+        // Update status domba di Master Domba
         if (item.eartag) {
             const dombaList = this.getDomba();
             const dIdx = dombaList.findIndex(d => d.eartag === item.eartag || d.id === item.dombaId);
             if (dIdx >= 0) {
-                dombaList[dIdx].status = "Mati";
+                dombaList[dIdx].status = item.tipeKejadian === "Afkir" ? "Afkir" : "Mati";
                 dombaList[dIdx].tglMati = item.tglKematian;
                 dombaList[dIdx].penyebabMati = item.penyebab;
+                dombaList[dIdx].beritaAcaraId = item.beritaAcaraId;
+                dombaList[dIdx].nomorSuratBA = item.nomorSurat;
                 this.saveDomba(dombaList);
             }
         }
 
-        this.addLog(`Pencatatan mortalitas: Ternak ${item.eartag} (${item.kategoriTernak}) meninggal.`);
+        this.addLog(`Pencatatan mortalitas: Ternak ${item.eartag} (${item.kategoriTernak}) meninggal. Terbit BA: ${item.nomorSurat || '-'}`);
         return item;
     },
+
     deleteBreedingKematian(id) {
-        const list = this.getBreedingKematian();
+        const list = this.safeGet(STORAGE_KEYS.BREEDING_KEMATIAN, []);
         const found = list.find(m => m.id === id);
         const filtered = list.filter(m => m.id !== id);
         this.saveBreedingKematian(filtered);
-        if (found) this.addLog(`Hapus log kematian: ${found.eartag}`);
+
+        if (found) {
+            if (found.beritaAcaraId) {
+                const baList = this.getBeritaAcara();
+                const updatedBa = baList.filter(b => b.id !== found.beritaAcaraId);
+                if (updatedBa.length !== baList.length) {
+                    this.saveBeritaAcara(updatedBa);
+                }
+            }
+
+            if (found.eartag || found.dombaId) {
+                const dombaList = this.getDomba();
+                const dIdx = dombaList.findIndex(d => d.eartag === found.eartag || d.id === found.dombaId);
+                if (dIdx >= 0 && (dombaList[dIdx].status === "Mati" || dombaList[dIdx].status === "Afkir")) {
+                    dombaList[dIdx].status = "Sehat";
+                    delete dombaList[dIdx].tglMati;
+                    delete dombaList[dIdx].penyebabMati;
+                    delete dombaList[dIdx].beritaAcaraId;
+                    delete dombaList[dIdx].nomorSuratBA;
+                    this.saveDomba(dombaList);
+                }
+            }
+            this.addLog(`Hapus log kematian & Berita Acara: ${found.eartag}`);
+        }
         return true;
     },
 
@@ -2795,6 +3250,396 @@ const Store = {
         this.saveKemitraan(filtered);
         if (found) this.addLog(`Hapus kemitraan: ${found.namaMitra}`);
         return true;
+    },
+
+    // ==========================================
+    // BERITA ACARA KEMATIAN / AFKIR TERNAK (LPJ AUDIT DESA)
+    // ==========================================
+    defaultBeritaAcara() {
+        return [
+            {
+                id: "ba-2026-001",
+                nomorSurat: "001/BA-KMT/BUMKAL-LPM/PLT/VIII/2026",
+                tglSurat: "2026-08-14",
+                tglKematian: "2026-08-14",
+                jamKematian: "06:30 WIB",
+                dombaId: "hist-01",
+                eartag: "DMB-HIST-01",
+                nama: "Cempe Bintang",
+                ras: "Garut Cross",
+                kelamin: "Jantan",
+                kandang: "Kandang B (Koloni Induk & Breeding)",
+                sekat: "Sekat Bersalin 01",
+                bobotTerakhir: 3.10,
+                nilaiBukuAset: 500000,
+                tipeKejadian: "Kematian Alami",
+                penyebab: "Hipotermia akut akibat cuaca dingin ekstrem malam hari",
+                tindakanBangkai: "Nekropsi klinis dilanjutkan penguburan biosecurity dengan kapur aktif (kedalaman 1.5 meter)",
+                lokasiKubur: "Lahan Pengolahan Limbah Barat Kandang BUMKal",
+                saksi1Nama: "Wahyu Pratama, A.Md.",
+                saksi1Jabatan: "Kepala Kandang & Paramedik Veteriner",
+                saksi2Nama: "Tri Haryanto",
+                saksi2Jabatan: "Staf Logistik Kandang",
+                mengetahuiNama: "H. Supardi, S.Pt.",
+                mengetahuiJabatan: "Direktur Utama BUMKal LPM Pleret",
+                fotoBukti: "",
+                catatan: "SOP penanganan bangkai telah diverifikasi oleh dokter hewan pendamping kalurahan. Tidak ada indikasi wabah menular PMK.",
+                createdAt: "2026-08-14T08:00:00.000Z"
+            }
+        ];
+    },
+
+    getBeritaAcara() {
+        const raw = localStorage.getItem(STORAGE_KEYS.BERITA_ACARA);
+        const list = this.safeGet(STORAGE_KEYS.BERITA_ACARA, null);
+        if (raw === null || list === null) {
+            return this.defaultBeritaAcara();
+        }
+        return list;
+    },
+
+    saveBeritaAcara(list) {
+        localStorage.setItem(STORAGE_KEYS.BERITA_ACARA, JSON.stringify(list));
+        this.triggerAutoSync();
+    },
+
+    addBeritaAcara(data, skipSync = false) {
+        const list = this.getBeritaAcara();
+        const year = new Date().getFullYear();
+        const count = list.length + 1;
+        const noFormatted = String(count).padStart(3, '0');
+        const romanMonths = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+        const curMonth = romanMonths[new Date().getMonth()];
+
+        const item = {
+            id: data.id || "ba-" + Date.now(),
+            nomorSurat: data.nomorSurat || `${noFormatted}/BA-KMT/BUMKAL-LPM/PLT/${curMonth}/${year}`,
+            tglSurat: data.tglSurat || new Date().toISOString().split('T')[0],
+            tglKematian: data.tglKematian || new Date().toISOString().split('T')[0],
+            jamKematian: data.jamKematian || "07:00 WIB",
+            dombaId: data.dombaId || "",
+            eartag: data.eartag || "",
+            nama: data.nama || "",
+            ras: data.ras || "",
+            kelamin: data.kelamin || "",
+            kandang: data.kandang || "",
+            sekat: data.sekat || "",
+            bobotTerakhir: parseFloat(data.bobotTerakhir) || 0,
+            nilaiBukuAset: parseFloat(data.nilaiBukuAset) || 0,
+            tipeKejadian: data.tipeKejadian || "Kematian Alami",
+            penyebab: data.penyebab || "",
+            tindakanBangkai: data.tindakanBangkai || "Penguburan Biosecurity Sesuai SOP",
+            lokasiKubur: data.lokasiKubur || "Kompleks Pembuangan Limbah Kandang",
+            saksi1Nama: data.saksi1Nama || "Wahyu Pratama, A.Md.",
+            saksi1Jabatan: data.saksi1Jabatan || "Kepala Kandang",
+            saksi2Nama: data.saksi2Nama || "Tri Haryanto",
+            saksi2Jabatan: data.saksi2Jabatan || "Staf Kandang",
+            mengetahuiNama: data.mengetahuiNama || "H. Supardi, S.Pt.",
+            mengetahuiJabatan: data.mengetahuiJabatan || "Direktur Utama BUMKal LPM Pleret",
+            fotoBukti: data.fotoBukti || "",
+            catatan: data.catatan || "",
+            createdAt: new Date().toISOString()
+        };
+
+        list.unshift(item);
+        this.saveBeritaAcara(list);
+
+        // Jika opsi ubah status domba aktif dicentang atau domba ada
+        if (item.dombaId || item.eartag) {
+            const dombaList = this.getDomba();
+            const dIdx = dombaList.findIndex(d => (item.dombaId && d.id === item.dombaId) || (item.eartag && d.eartag === item.eartag));
+            if (dIdx >= 0) {
+                dombaList[dIdx].status = item.tipeKejadian === "Afkir" ? "Afkir" : "Mati";
+                dombaList[dIdx].tglMati = item.tglKematian;
+                dombaList[dIdx].penyebabMati = item.penyebab;
+                dombaList[dIdx].beritaAcaraId = item.id;
+                dombaList[dIdx].nomorSuratBA = item.nomorSurat;
+                this.saveDomba(dombaList);
+            }
+        }
+
+        // Sinkronisasi otomatis ke log mortalitas breeding jika belum ada
+        if (!skipSync) {
+            const tipe = (item.tipeKejadian || '').toLowerCase();
+            if (tipe.includes('kematian') || tipe.includes('mati') || tipe.includes('afkir')) {
+                const matiList = this.safeGet(STORAGE_KEYS.BREEDING_KEMATIAN, []);
+                const existing = matiList.find(m => m.beritaAcaraId === item.id || (m.eartag && m.eartag === item.eartag && m.tglKematian === item.tglKematian));
+                if (!existing) {
+                    matiList.unshift({
+                        id: "dth-" + item.id,
+                        dombaId: item.dombaId,
+                        eartag: item.eartag,
+                        nama: item.nama,
+                        ras: item.ras,
+                        kategoriTernak: item.tipeKejadian === "Afkir" ? "Afkir" : "Ternak",
+                        tglKematian: item.tglKematian,
+                        jamKematian: item.jamKematian,
+                        penyebab: item.penyebab,
+                        tindakanBangkai: item.tindakanBangkai,
+                        petugas: item.saksi1Nama,
+                        catatan: item.catatan,
+                        beritaAcaraId: item.id,
+                        nomorSurat: item.nomorSurat,
+                        tipeKejadian: item.tipeKejadian,
+                        createdAt: item.createdAt
+                    });
+                    this.saveBreedingKematian(matiList);
+                }
+            }
+        }
+
+        this.addLog(`Buat Berita Acara ${item.tipeKejadian}: ${item.eartag} (${item.nomorSurat})`);
+        return item;
+    },
+
+    deleteBeritaAcara(id) {
+        const list = this.getBeritaAcara();
+        const found = list.find(b => b.id === id);
+        const filtered = list.filter(b => b.id !== id);
+        this.saveBeritaAcara(filtered);
+
+        if (found) {
+            // Hapus dari log mortalitas breeding yang tertaut
+            const matiList = this.safeGet(STORAGE_KEYS.BREEDING_KEMATIAN, []);
+            const updatedMati = matiList.filter(m => m.beritaAcaraId !== id && m.eartag !== found.eartag);
+            if (updatedMati.length !== matiList.length) {
+                this.saveBreedingKematian(updatedMati);
+            }
+
+            // Kembalikan status domba ke Sehat jika statusnya Mati/Afkir
+            if (found.eartag || found.dombaId) {
+                const dombaList = this.getDomba();
+                const dIdx = dombaList.findIndex(d => (found.dombaId && d.id === found.dombaId) || (found.eartag && d.eartag === found.eartag));
+                if (dIdx >= 0 && (dombaList[dIdx].status === "Mati" || dombaList[dIdx].status === "Afkir")) {
+                    dombaList[dIdx].status = "Sehat";
+                    delete dombaList[dIdx].tglMati;
+                    delete dombaList[dIdx].penyebabMati;
+                    delete dombaList[dIdx].beritaAcaraId;
+                    delete dombaList[dIdx].nomorSuratBA;
+                    this.saveDomba(dombaList);
+                }
+            }
+            this.addLog(`Hapus Berita Acara: ${found.nomorSurat}`);
+        }
+        return true;
+    },
+
+    // ==========================================
+    // RIWAYAT MUTASI SEKAT & SAPIH CEMPE
+    // ==========================================
+    defaultRiwayatMutasiSekat() {
+        return [
+            {
+                id: "mut-001",
+                tgl: "2026-08-20",
+                eartag: "DMB-005",
+                nama: "Joko Tarub",
+                ras: "Merino",
+                kandangAsal: "Kandang C (Karantina)",
+                sekatAsal: "Sekat Karantina 02",
+                kandangTujuan: "Kandang A (Pejantan & Fattening)",
+                sekatTujuan: "Sekat 03",
+                alasan: "Lulus Karantina Medis & Masuk Fase Penggemukan",
+                petugas: "Wahyu Pratama",
+                catatan: "Suhu tubuh stabil, nafsu makan konsentrat tinggi.",
+                createdAt: "2026-08-20T09:00:00.000Z"
+            },
+            {
+                id: "mut-002",
+                tgl: "2026-09-01",
+                eartag: "DMB-001",
+                nama: "Barata Super",
+                ras: "Dorper Cross",
+                kandangAsal: "Kandang A (Pejantan & Fattening)",
+                sekatAsal: "Sekat 01",
+                kandangTujuan: "Kandang B (Koloni Induk & Breeding)",
+                sekatTujuan: "Sekat Kawin 01",
+                alasan: "Program Pemacakan / Perkawinan Indukan",
+                petugas: "Wahyu Pratama",
+                catatan: "Kondisi pejantan sangat agresif dan prima.",
+                createdAt: "2026-09-01T08:30:00.000Z"
+            }
+        ];
+    },
+
+    getRiwayatMutasiSekat() {
+        const raw = localStorage.getItem(STORAGE_KEYS.MUTASI_SEKAT);
+        const list = this.safeGet(STORAGE_KEYS.MUTASI_SEKAT, null);
+        if (raw === null || list === null) {
+            return this.defaultRiwayatMutasiSekat();
+        }
+        return list;
+    },
+
+    saveRiwayatMutasiSekat(list) {
+        localStorage.setItem(STORAGE_KEYS.MUTASI_SEKAT, JSON.stringify(list));
+        this.triggerAutoSync();
+    },
+
+    addMutasiSekat(data) {
+        const list = this.getRiwayatMutasiSekat();
+        const item = {
+            id: data.id || "mut-" + Date.now(),
+            tgl: data.tgl || new Date().toISOString().split('T')[0],
+            eartag: data.eartag || "",
+            nama: data.nama || "",
+            ras: data.ras || "",
+            kandangAsal: data.kandangAsal || "-",
+            sekatAsal: data.sekatAsal || "-",
+            kandangTujuan: data.kandangTujuan || "",
+            sekatTujuan: data.sekatTujuan || "",
+            alasan: data.alasan || "Rotasi Sekat",
+            petugas: data.petugas || "Petugas Kandang",
+            catatan: data.catatan || "",
+            createdAt: new Date().toISOString()
+        };
+
+        list.unshift(item);
+        this.saveRiwayatMutasiSekat(list);
+
+        // Sinkronkan lokasi domba di Master Domba
+        if (item.eartag) {
+            const dombaList = this.getDomba();
+            const dIdx = dombaList.findIndex(d => d.eartag === item.eartag);
+            if (dIdx >= 0) {
+                dombaList[dIdx].kandang = item.kandangTujuan || dombaList[dIdx].kandang;
+                dombaList[dIdx].sekat = item.sekatTujuan || dombaList[dIdx].sekat;
+                if (data.kategoriBaru) {
+                    dombaList[dIdx].kategori = data.kategoriBaru;
+                }
+                this.saveDomba(dombaList);
+            }
+        }
+
+        this.addLog(`Mutasi sekat ${item.eartag}: ${item.sekatAsal} -> ${item.sekatTujuan} (${item.alasan})`);
+        return item;
+    },
+
+    updateMutasiSekat(id, updatedData, syncDomba = true) {
+        const list = this.getRiwayatMutasiSekat();
+        const idx = list.findIndex(m => m.id === id);
+        if (idx === -1) return null;
+
+        const current = list[idx];
+        const updated = {
+            ...current,
+            tgl: updatedData.tgl || current.tgl,
+            eartag: updatedData.eartag || current.eartag,
+            nama: updatedData.nama !== undefined ? updatedData.nama : current.nama,
+            ras: updatedData.ras !== undefined ? updatedData.ras : current.ras,
+            kandangAsal: updatedData.kandangAsal !== undefined ? updatedData.kandangAsal : current.kandangAsal,
+            sekatAsal: updatedData.sekatAsal !== undefined ? updatedData.sekatAsal : current.sekatAsal,
+            kandangTujuan: updatedData.kandangTujuan !== undefined ? updatedData.kandangTujuan : current.kandangTujuan,
+            sekatTujuan: updatedData.sekatTujuan !== undefined ? updatedData.sekatTujuan : current.sekatTujuan,
+            alasan: updatedData.alasan !== undefined ? updatedData.alasan : current.alasan,
+            petugas: updatedData.petugas !== undefined ? updatedData.petugas : current.petugas,
+            catatan: updatedData.catatan !== undefined ? updatedData.catatan : current.catatan,
+            updatedAt: new Date().toISOString()
+        };
+
+        list[idx] = updated;
+        this.saveRiwayatMutasiSekat(list);
+
+        if (syncDomba && updated.eartag) {
+            const dombaList = this.getDomba();
+            const dIdx = dombaList.findIndex(d => d.eartag === updated.eartag);
+            if (dIdx >= 0) {
+                if (updated.kandangTujuan) dombaList[dIdx].kandang = updated.kandangTujuan;
+                if (updated.sekatTujuan) dombaList[dIdx].sekat = updated.sekatTujuan;
+                if (updatedData.kategoriBaru) dombaList[dIdx].kategori = updatedData.kategoriBaru;
+                this.saveDomba(dombaList);
+            }
+        }
+
+        this.addLog(`Update riwayat mutasi sekat ${updated.eartag}: ${updated.sekatAsal} -> ${updated.sekatTujuan}`);
+        return updated;
+    },
+
+    deleteMutasiSekat(id) {
+        const list = this.getRiwayatMutasiSekat();
+        const item = list.find(m => m.id === id);
+        const filtered = list.filter(m => m.id !== id);
+        this.saveRiwayatMutasiSekat(filtered);
+        if (item) {
+            this.addLog(`Hapus riwayat mutasi sekat ${item.eartag} (${item.sekatAsal} -> ${item.sekatTujuan})`);
+        }
+        return true;
+    },
+
+    // ==========================================
+    // HPP RIIL PER EKOR & UNIT COSTING
+    // ==========================================
+    getHPPConfig() {
+        const fallback = {
+            hppPakanPerHari: 5500, // Rp per ekor per hari (konsentrat + silase + hijauan)
+            biayaMedisPerTindakan: 25000, // Rp per rekam medis
+            biayaMedisStandar: 35000, // Rp biaya vaksinasi/vitamin bawaan
+            overheadPerHari: 1000, // Rp per ekor per hari (tenaga kerja, listrik, air, sewa)
+            hargaDagingHidupPerKg: 75000
+        };
+        return this.safeGet(STORAGE_KEYS.HPP_CONFIG, fallback);
+    },
+
+    saveHPPConfig(cfg) {
+        localStorage.setItem(STORAGE_KEYS.HPP_CONFIG, JSON.stringify(cfg));
+        this.triggerAutoSync();
+    },
+
+    hitungHPPUnitDomba(d, customConfig = null) {
+        const cfg = customConfig || this.getHPPConfig();
+        const settings = this.getPengaturan ? this.getPengaturan() : {};
+        const hargaPerKg = cfg.hargaDagingHidupPerKg || settings.hargaDagingHidupPerKg || 75000;
+
+        // 1. Hari Pemeliharaan
+        const tglMasukStr = d.tglMasuk || "2026-07-01";
+        const tglMasukDate = new Date(tglMasukStr);
+        const tglAkhir = d.tglTerjual ? new Date(d.tglTerjual) : new Date();
+        const hariPemeliharaan = Math.max(1, Math.round((tglAkhir - tglMasukDate) / (1000 * 60 * 60 * 24)));
+
+        // 2. Biaya Beli / Bakalan Awal
+        const hargaBeli = parseFloat(d.hargaBeli) || 0;
+
+        // 3. Akumulasi Biaya Pakan
+        const hppPakanHarian = parseFloat(cfg.hppPakanPerHari) || 5500;
+        const totalBiayaPakan = Math.round(hariPemeliharaan * hppPakanHarian);
+
+        // 4. Biaya Kesehatan & Medis
+        const countMedis = (d.rekamMedis && Array.isArray(d.rekamMedis)) ? d.rekamMedis.length : 0;
+        const biayaMedis = countMedis > 0 
+            ? (countMedis * (parseFloat(cfg.biayaMedisPerTindakan) || 25000))
+            : (parseFloat(cfg.biayaMedisStandar) || 35000);
+
+        // 5. Overhead & Operasional
+        const overheadHarian = parseFloat(cfg.overheadPerHari) || 1000;
+        const totalOverhead = Math.round(hariPemeliharaan * overheadHarian);
+
+        // 6. HPP Total
+        const hppTotal = Math.round(hargaBeli + totalBiayaPakan + biayaMedis + totalOverhead);
+
+        // 7. Bobot & Nilai Jual
+        const latestWeight = d.riwayatTimbang?.length > 0 ? d.riwayatTimbang[d.riwayatTimbang.length - 1].bobot : (d.bobotAwal || 25);
+        const estimasiHargaJual = Math.round(latestWeight * hargaPerKg);
+
+        // 8. Laba Bersih & Margin %
+        const labaBersih = estimasiHargaJual - hppTotal;
+        const marginPersen = hppTotal > 0 ? Math.round((labaBersih / hppTotal) * 1000) / 10 : 0;
+
+        return {
+            hariPemeliharaan,
+            hargaBeli,
+            hppPakanHarian,
+            totalBiayaPakan,
+            countMedis,
+            biayaMedis,
+            overheadHarian,
+            totalOverhead,
+            hppTotal,
+            latestWeight: parseFloat(Number(latestWeight).toFixed(2)),
+            hargaPerKg,
+            estimasiHargaJual,
+            labaBersih,
+            marginPersen
+        };
     },
 
     // --- RESET TOTAL PABRIK BERSIH (SEMUA DATA JADI 0, USER TETAP UTUH) ---

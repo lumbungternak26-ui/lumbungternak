@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kandang-bumkal-v2.7.8';
+const CACHE_NAME = 'kandang-bumkal-v2.9.7';
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -21,8 +21,12 @@ const STATIC_ASSETS = [
     './js/modules/limbah.js',
     './js/modules/kanban.js',
     './js/modules/breeding.js',
+    './js/modules/manajemen_sapih.js',
+    './js/modules/paspor_skkh.js',
     './js/modules/sdm_agenda.js',
     './js/modules/keuangan.js',
+    './js/modules/hpp_costing.js',
+    './js/modules/berita_acara.js',
     './manifest.json',
     './assets/icon-192.svg',
     './assets/icon-512.svg'

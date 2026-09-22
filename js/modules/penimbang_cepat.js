@@ -107,7 +107,7 @@ const PenimbangCepatModule = {
                                         Lokasi: <b>${selectedDomba.kandang} / ${selectedDomba.sekat}</b> • Kelamin: <b>${selectedDomba.kelamin}</b> • Status: <b class="text-emerald-600">${selectedDomba.status}</b>
                                     </div>
                                     <div class="text-xs text-slate-600 dark:text-slate-300 pt-1">
-                                        Timbangan Terakhir: <b class="text-blue-600 dark:text-blue-400 text-sm">${lastWeight} kg</b> (${lastTgl})
+                                        Timbangan Terakhir: <b class="text-blue-600 dark:text-blue-400 text-sm">${Number(lastWeight || 0).toFixed(2)} kg</b> (${lastTgl})
                                     </div>
                                 </div>
                                 <div class="hidden md:block text-center flex-shrink-0 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-700 max-w-[140px]">
@@ -125,10 +125,10 @@ const PenimbangCepatModule = {
                                         <div class="relative">
                                             <input 
                                                 type="number" 
-                                                step="0.1" 
+                                                step="0.01" 
                                                 id="qc-bobot" 
                                                 required 
-                                                placeholder="Contoh: 48.5" 
+                                                placeholder="Contoh: 48.50" 
                                                 oninput="PenimbangCepatModule.calculateLiveADG(this.value, ${lastWeight}, '${lastTgl}')"
                                                 class="w-full p-4 rounded-xl border-2 border-blue-500 bg-white dark:bg-slate-900 text-3xl font-black text-emerald-600 dark:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             >
@@ -197,7 +197,7 @@ const PenimbangCepatModule = {
                                 <div class="p-3 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/30 hover:bg-white dark:hover:bg-slate-800 transition space-y-1">
                                     <div class="flex items-center justify-between font-bold">
                                         <span class="text-slate-800 dark:text-slate-200">${r.eartag} (${r.nama.split(' ')[0]})</span>
-                                        <span class="text-emerald-600 dark:text-emerald-400 text-sm font-black">${r.bobot} kg</span>
+                                        <span class="text-emerald-600 dark:text-emerald-400 text-sm font-black">${Number(r.bobot || 0).toFixed(2)} kg</span>
                                     </div>
                                     <div class="flex items-center justify-between text-[11px] text-slate-400">
                                         <span>${r.ras}</span>
@@ -231,7 +231,7 @@ const PenimbangCepatModule = {
             return;
         }
 
-        const deltaKg = Math.round((newWeight - lastWeight) * 10) / 10;
+        const deltaKg = Math.round((newWeight - lastWeight) * 100) / 100;
         const dLast = lastTglStr !== "-" ? new Date(lastTglStr) : new Date();
         const dNow = new Date();
         const diffDays = Math.max(1, Math.round((dNow - dLast) / (1000 * 60 * 60 * 24)));
@@ -240,23 +240,23 @@ const PenimbangCepatModule = {
         if (deltaKg >= 0) {
             adgEl.innerText = `+${adg} g / hari`;
             adgEl.className = "text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1";
-            deltaEl.innerHTML = `<b class="text-emerald-600">+${deltaKg} kg</b> dalam ${diffDays} hari terakhir (ADG Prima)`;
+            deltaEl.innerHTML = `<b class="text-emerald-600">+${deltaKg.toFixed(2)} kg</b> dalam ${diffDays} hari terakhir (ADG Prima)`;
         } else {
             adgEl.innerText = `${adg} g / hari`;
             adgEl.className = "text-2xl font-black text-rose-600 dark:text-rose-400 mt-1";
-            deltaEl.innerHTML = `<b class="text-rose-600">${deltaKg} kg</b> (Penurunan bobot, cek kesehatan)`;
+            deltaEl.innerHTML = `<b class="text-rose-600">${deltaKg.toFixed(2)} kg</b> (Penurunan bobot, cek kesehatan)`;
         }
     },
 
     submitQuickWeigh(e) {
         e.preventDefault();
-        const bobot = parseFloat(document.getElementById("qc-bobot").value);
+        const bobot = parseFloat(parseFloat(document.getElementById("qc-bobot").value).toFixed(2));
         const tgl = document.getElementById("qc-tgl").value;
         const catatan = document.getElementById("qc-catatan").value.trim() || "Penimbangan cepat kandang";
 
         const res = Store.addRiwayatTimbang(this.selectedDombaId, tgl, bobot, catatan);
         if (res) {
-            App.showToast(`Berhasil menyimpan bobot ${res.domba.eartag} (${bobot} kg, ADG: ${res.adg} g/hari)!`, "success");
+            App.showToast(`Berhasil menyimpan bobot ${res.domba.eartag} (${bobot.toFixed(2)} kg, ADG: ${res.adg} g/hari)!`, "success");
             App.renderContent();
         }
     },

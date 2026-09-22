@@ -441,39 +441,47 @@ const BreedingModule = {
                         <i data-lucide="shield-alert" class="w-5 h-5"></i>
                     </div>
                     <div>
-                        <h4 class="font-bold text-sm text-amber-900 dark:text-amber-300">Standar Biosecurity & Pelaporan Mortalitas</h4>
+                        <h4 class="font-bold text-sm text-amber-900 dark:text-amber-300">Standar Biosecurity & Pelaporan Mortalitas (LPJ BUMKal)</h4>
                         <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
-                            Batas toleransi mortalitas kandang: <b>&lt; 5%</b>. Setiap kematian wajib melalui pemeriksaan klinis dan bangkai dikubur sesuai SOP biosecurity lingkungan.
+                            Batas toleransi mortalitas kandang: <b>&lt; 5%</b>. Setiap kematian wajib melalui pemeriksaan klinis, dicatat dalam Berita Acara resmi, dan bangkai dikubur sesuai SOP biosecurity lingkungan.
                         </p>
                     </div>
                 </div>
-                <button onclick="BreedingModule.openModalMortalitas()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow transition flex items-center gap-2 flex-shrink-0 self-start sm:self-auto">
-                    <i data-lucide="plus" class="w-4 h-4"></i> Catat Kematian
-                </button>
+                <div class="flex items-center gap-2 flex-shrink-0 self-start sm:self-auto flex-wrap">
+                    <button onclick="App.navigate('berita_acara_ternak')" class="px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs shadow-sm transition flex items-center gap-1.5 cursor-pointer">
+                        <i data-lucide="file-check-2" class="w-4 h-4 text-emerald-600"></i> Register Berita Acara
+                    </button>
+                    <button onclick="BreedingModule.openModalMortalitas()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow transition flex items-center gap-2 cursor-pointer">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Catat Kematian
+                    </button>
+                </div>
             </div>
 
-            <!-- Tabel Data Kematian -->
+            <!-- Tabel Data Kematian Terintegrasi Berita Acara -->
             <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-                <div class="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                <div class="p-4 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
-                        <h3 class="font-bold text-sm text-slate-900 dark:text-white">Log Mortalitas & Penanganan Bangkai</h3>
-                        <p class="text-[11px] text-slate-400">Total ${totalKematian} kasus kematian dari ${populasiAktif + totalKematian} populasi total.</p>
+                        <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                            <span>Log Mortalitas & Penanganan Bangkai</span>
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">Sinkron Berita Acara</span>
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Total ${totalKematian} kasus kematian tercatat dari ${populasiAktif + totalKematian} total populasi ternak terdaftar.</p>
                     </div>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
+                    <table class="w-full text-left border-collapse text-xs">
                         <thead>
                             <tr class="bg-slate-50 dark:bg-slate-900/60 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-700">
-                                <th class="p-3.5">Eartag Ternak</th>
-                                <th class="p-3.5">Kategori</th>
-                                <th class="p-3.5">Tanggal</th>
-                                <th class="p-3.5">Penyebab Kematian</th>
-                                <th class="p-3.5">Tindakan Bangkai</th>
-                                <th class="p-3.5">Petugas</th>
-                                <th class="p-3.5 text-right">Aksi</th>
+                                <th class="p-3.5 pl-4">Eartag & Identitas</th>
+                                <th class="p-3.5">Kategori / Lokasi</th>
+                                <th class="p-3.5">Waktu Kejadian</th>
+                                <th class="p-3.5">Diagnosa Klinis</th>
+                                <th class="p-3.5">Tindakan Biosecurity</th>
+                                <th class="p-3.5">Dokumen Berita Acara</th>
+                                <th class="p-3.5 text-right pr-4">Aksi Legalitas</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60">
                             ${list.length === 0 ? `
                             <tr>
                                 <td colspan="7" class="p-8 text-center text-xs text-slate-400">
@@ -481,31 +489,59 @@ const BreedingModule = {
                                 </td>
                             </tr>
                             ` : list.map(item => `
-                            <tr class="border-b border-slate-100 dark:border-slate-700/60 hover:bg-slate-50 text-xs">
-                                <td class="p-3.5 font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
-                                    <i data-lucide="skull" class="w-3.5 h-3.5"></i> ${item.eartag}
+                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-750 transition">
+                                <td class="p-3.5 pl-4">
+                                    <div class="font-mono font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 text-sm">
+                                        <i data-lucide="skull" class="w-3.5 h-3.5"></i> ${item.eartag}
+                                    </div>
+                                    <div class="text-[10px] text-slate-500 mt-0.5">${item.nama || '-'} (${item.ras || 'Domba'})</div>
                                 </td>
-                                <td class="p-3.5 text-slate-600 dark:text-slate-300">
-                                    ${item.kategoriTernak}
+                                <td class="p-3.5">
+                                    <div class="font-semibold text-slate-800 dark:text-slate-200">${item.kategoriTernak || 'Ternak'}</div>
+                                    <div class="text-[10px] text-slate-400">${item.kandang || 'Kandang'} • ${item.sekat || 'Sekat'}</div>
                                 </td>
-                                <td class="p-3.5 text-slate-600 dark:text-slate-300">
-                                    ${item.tglKematian}
+                                <td class="p-3.5">
+                                    <div class="font-medium text-slate-800 dark:text-slate-200">${item.tglKematian}</div>
+                                    <div class="text-[10px] font-mono text-slate-400">${item.jamKematian || '07:00 WIB'}</div>
                                 </td>
                                 <td class="p-3.5">
                                     <span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 font-bold text-[10px]">
                                         ${item.penyebab}
                                     </span>
+                                    ${item.catatan ? `<div class="text-[10px] text-slate-400 italic mt-1 max-w-xs truncate" title="${item.catatan}">"${item.catatan}"</div>` : ''}
                                 </td>
-                                <td class="p-3.5 text-slate-600 dark:text-slate-300">
-                                    ${item.tindakanBangkai || 'Dikubur Sesuai SOP'}
+                                <td class="p-3.5">
+                                    <div class="text-slate-700 dark:text-slate-300 font-medium">${item.tindakanBangkai || 'Dikubur Sesuai SOP'}</div>
+                                    <div class="text-[10px] text-slate-400 mt-0.5">Petugas: <b>${item.petugas || 'Paramedik'}</b></div>
                                 </td>
-                                <td class="p-3.5 text-slate-600 dark:text-slate-300">
-                                    ${item.petugas || '-'}
+                                <td class="p-3.5">
+                                    ${item.beritaAcaraId ? `
+                                        <div class="flex flex-col gap-1 items-start">
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-mono text-[10px] font-bold" title="${item.nomorSurat}">
+                                                <i data-lucide="file-check-2" class="w-3 h-3 text-emerald-600"></i> ${item.nomorSurat || 'BA Terbit'}
+                                            </span>
+                                            <span class="text-[9px] text-slate-400">✓ Sah Dokumen LPJ BUMKal</span>
+                                        </div>
+                                    ` : `
+                                        <span class="px-2 py-0.5 rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-900/40 text-[10px] font-bold">
+                                            Belum Ada BA
+                                        </span>
+                                    `}
                                 </td>
-                                <td class="p-3.5 text-right">
-                                    <button onclick="BreedingModule.hapusMortalitas('${item.id}')" title="Hapus Log" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg">
-                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                    </button>
+                                <td class="p-3.5 text-right pr-4">
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        ${item.beritaAcaraId ? `
+                                            <button onclick="BeritaAcaraModule.cetakWindow('${item.beritaAcaraId}')" title="Cetak Berita Acara Resmi (A4)" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 shadow-sm transition cursor-pointer">
+                                                <i data-lucide="printer" class="w-3.5 h-3.5"></i> Cetak BA
+                                            </button>
+                                            <button onclick="BeritaAcaraModule.lihatDetail('${item.beritaAcaraId}')" title="Lihat Detail Berita Acara" class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer">
+                                                <i data-lucide="eye" class="w-4 h-4"></i>
+                                            </button>
+                                        ` : ''}
+                                        <button onclick="BreedingModule.hapusMortalitas('${item.id}')" title="Hapus Log Mortalitas & Berita Acara" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             `).join("")}
@@ -854,11 +890,12 @@ const BreedingModule = {
         }
     },
 
-    // 3. Modal Catat Kematian & Mortalitas
+    // 3. Modal Catat Kematian & Mortalitas Terintegrasi Berita Acara Resmi
     openModalMortalitas() {
         const dombaList = Store.getDomba ? Store.getDomba() : [];
-        const hidupDomba = dombaList.filter(d => d.status !== "Mati");
+        const hidupDomba = dombaList.filter(d => d.status !== "Mati" && d.status !== "Afkir");
         const today = new Date().toISOString().split('T')[0];
+        const nowTime = new Date().toTimeString().slice(0, 5) + " WIB";
 
         const html = `
         <div class="p-6 space-y-5">
@@ -868,73 +905,125 @@ const BreedingModule = {
                         <i data-lucide="skull" class="w-5 h-5"></i>
                     </div>
                     <div>
-                        <h3 class="text-base font-bold text-slate-900 dark:text-white">Pencatatan Kasus Kematian (Mortalitas)</h3>
-                        <p class="text-xs text-slate-500">Standar biosecurity: update status domba & catat penyebab klinis.</p>
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white">Pencatatan Mortalitas & Penerbitan Berita Acara</h3>
+                        <p class="text-xs text-slate-500">Standar audit LPJ BUMKal & SOP biosecurity penanganan bangkai.</p>
                     </div>
                 </div>
-                <button onclick="App.closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="App.closeModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
             <form onsubmit="BreedingModule.submitMortalitas(event)" class="space-y-4 text-xs">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Eartag Ternak Meninggal</label>
-                        <select id="mor-domba" required class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                            <option value="">-- Pilih Eartag Ternak --</option>
-                            ${hidupDomba.map(d => `<option value="${d.eartag}" data-kategori="${d.kategori || 'Dewasa'}">${d.eartag} - ${d.nama || d.ras} (${d.kategori || 'Ternak'})</option>`).join("")}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Kategori Fase Ternak</label>
-                        <select id="mor-kategori" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                            <option value="Cempe (0-3 Bulan)">Cempe (0-3 Bulan)</option>
-                            <option value="Lepas Sapih (Dara/Muda)">Lepas Sapih (Dara/Muda)</option>
-                            <option value="Indukan Bunting/Menyusui">Indukan Bunting/Menyusui</option>
-                            <option value="Pejantan Pemacek">Pejantan Pemacek</option>
-                            <option value="Bakalan Penggemukan (Fattening)">Bakalan Penggemukan (Fattening)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal Kematian</label>
-                        <input type="date" id="mor-tgl" value="${today}" required class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                    </div>
-                    <div>
-                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Penyebab Kematian (Diagnosa Klinis)</label>
-                        <select id="mor-penyebab" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                            <option value="Kembung Akut (Bloat/Timpani)">Kembung Akut (Bloat/Timpani)</option>
-                            <option value="Diare Berat / Enteritis">Diare Berat / Enteritis</option>
-                            <option value="Pneumonia / Gangguan Paru">Pneumonia / Gangguan Paru</option>
-                            <option value="Infeksi Tali Pusar (Cempe)">Infeksi Tali Pusar (Cempe)</option>
-                            <option value="Hipotermia / Kedinginan">Hipotermia / Kedinginan</option>
-                            <option value="Distokia / Komplikasi Melahirkan">Distokia / Komplikasi Melahirkan</option>
-                            <option value="Trauma Fisik / Terinjak">Trauma Fisik / Terinjak</option>
-                            <option value="Keracunan Pakan">Keracunan Pakan</option>
-                            <option value="Lainnya">Lainnya</option>
-                        </select>
-                    </div>
-                </div>
-
+                <!-- Baris 1: Pemilihan Domba -->
                 <div>
-                    <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tindakan Penanganan Bangkai</label>
-                    <select id="mor-tindakan" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                        <option value="Dikubur Kedalaman 1.5m Sesuai SOP Biosecurity">Dikubur Kedalaman 1.5m Sesuai SOP Biosecurity</option>
-                        <option value="Dikremasi / Dibakar Terkendali">Dikremasi / Dibakar Terkendali</option>
-                        <option value="Bedah Bangkai (Nekropsi) lalu Dikubur">Bedah Bangkai (Nekropsi) lalu Dikubur</option>
+                    <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Pilih Ternak *</label>
+                    <select id="mor-domba" required onchange="BreedingModule.onDombaMatiChange(this.value)" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                        <option value="">-- Pilih Eartag Ternak --</option>
+                        ${hidupDomba.map(d => `<option value="${d.eartag}" data-id="${d.id}" data-nama="${d.nama || ''}" data-ras="${d.ras || ''}" data-kategori="${d.kategori || 'Dewasa'}" data-kandang="${d.kandang || ''}" data-sekat="${d.sekat || ''}" data-bobot="${d.bobotTerkini || d.berat || 0}" data-harga="${d.hargaBeli || 0}">${d.eartag} - ${d.nama || d.ras} (${d.kategori || 'Ternak'} • ${d.kandang || 'Kandang'} ${d.sekat || ''})</option>`).join("")}
                     </select>
                 </div>
 
+                <!-- Info Preview Ternak Terpilih -->
+                <div id="mor-ternak-info" class="hidden bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                    <div><span class="text-slate-400 block">Nama / Ras:</span><strong id="mor-prev-ras" class="text-slate-800 dark:text-slate-200">-</strong></div>
+                    <div><span class="text-slate-400 block">Kategori:</span><strong id="mor-prev-kat" class="text-slate-800 dark:text-slate-200">-</strong></div>
+                    <div><span class="text-slate-400 block">Kandang / Sekat:</span><strong id="mor-prev-lokasi" class="text-slate-800 dark:text-slate-200">-</strong></div>
+                    <div><span class="text-slate-400 block">Bobot & Nilai Aset:</span><strong id="mor-prev-aset" class="text-emerald-700 dark:text-emerald-400">-</strong></div>
+                </div>
+
+                <!-- Baris 2: Waktu & Tipe Kejadian -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal Kematian *</label>
+                        <input type="date" id="mor-tgl" value="${today}" required class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Jam Kejadian</label>
+                        <input type="text" id="mor-jam" value="${nowTime}" placeholder="07:00 WIB" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-mono">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tipe Kejadian</label>
+                        <select id="mor-tipe" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                            <option value="Kematian Alami">Kematian Alami</option>
+                            <option value="Kematian Sakit">Kematian Sakit</option>
+                            <option value="Afkir Seleksi Breeding">Afkir Seleksi Breeding</option>
+                            <option value="Afkir Cacat Permanen">Afkir Cacat Permanen</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Baris 3: Diagnosa Klinis & Penyebab -->
                 <div>
-                    <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Catatan Khusus / Hasil Nekropsi</label>
-                    <textarea id="mor-catatan" rows="2" placeholder="Gejala awal sebelum mati, terapi medis yang sempat diberikan, dll..." class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"></textarea>
+                    <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Diagnosa Klinis / Penyebab Utama *</label>
+                    <select id="mor-penyebab" required class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                        <option value="Kembung Akut (Bloat / Tympanites)">Kembung Akut (Bloat / Tympanites)</option>
+                        <option value="Diare Berat / Enteritis Akut">Diare Berat / Enteritis Akut</option>
+                        <option value="Pneumonia / Gangguan Pernapasan Akut">Pneumonia / Gangguan Pernapasan Akut</option>
+                        <option value="Hipotermia / Kedinginan Ekstrem">Hipotermia / Kedinginan Ekstrem</option>
+                        <option value="Infeksi Tali Pusar / Tetanus (Cempe)">Infeksi Tali Pusar / Tetanus (Cempe)</option>
+                        <option value="Distokia / Komplikasi Melahirkan">Distokia / Komplikasi Melahirkan</option>
+                        <option value="Trauma Fisik / Terinjak / Cedera Fraktur">Trauma Fisik / Terinjak / Cedera Fraktur</option>
+                        <option value="Keracunan Pakan / Asidosis Rumen">Keracunan Pakan / Asidosis Rumen</option>
+                        <option value="Penurunan Fisik Menua / Afkir Non-Produktif">Penurunan Fisik Menua / Afkir Non-Produktif</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+
+                <!-- Baris 4: SOP Biosecurity Pembuangan Bangkai -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tindakan Penanganan Bangkai</label>
+                        <select id="mor-tindakan" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                            <option value="Nekropsi klinis lalu dikubur kedalaman 1.5m dengan taburan kapur tohor">Nekropsi klinis lalu dikubur kedalaman 1.5m dengan kapur tohor</option>
+                            <option value="Langsung dikubur kedalaman 1.5m sesuai SOP biosecurity kandang">Langsung dikubur kedalaman 1.5m sesuai SOP biosecurity</option>
+                            <option value="Kremasi / Pembakaran terkendali di insinerator limbah">Kremasi / Pembakaran terkendali di insinerator limbah</option>
+                            <option value="Isolasi karantina dan afkir lelang/potong darurat">Isolasi karantina dan afkir lelang/potong darurat</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Lokasi Pemakaman / Pemusnahan</label>
+                        <input type="text" id="mor-lokasi-kubur" value="Lahan Pengolahan Limbah Barat Kandang BUMKal" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                    </div>
+                </div>
+
+                <!-- Baris 5: Saksi & Legalitas -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Pemeriksa / Paramedik</label>
+                        <input type="text" id="mor-saksi1" value="Wahyu Pratama, A.Md." class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Saksi Lapangan (ABK)</label>
+                        <input type="text" id="mor-saksi2" value="Tri Haryanto" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Pejabat Mengetahui</label>
+                        <input type="text" id="mor-mengetahui" value="H. Supardi, S.Pt." class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                    </div>
+                </div>
+
+                <!-- Baris 6: Catatan / Kronologi -->
+                <div>
+                    <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Catatan Kronologis & Terapi yang Sempat Diberikan</label>
+                    <textarea id="mor-catatan" rows="2" placeholder="Gejala awal yang terpantau, tindakan pertolongan pertama, konfirmasi bukan wabah menular..." class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"></textarea>
+                </div>
+
+                <!-- Opsi Penerbitan Berita Acara -->
+                <div class="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-3">
+                    <input type="checkbox" id="mor-buat-ba" checked class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500">
+                    <div>
+                        <label for="mor-buat-ba" class="font-bold text-emerald-900 dark:text-emerald-300 cursor-pointer">
+                            Otomatis Terbitkan Berita Acara Resmi LPJ BUMKal (A4)
+                        </label>
+                        <div class="text-[10px] text-emerald-700 dark:text-emerald-400">
+                            Menghasilkan Nomor Surat resmi berformat kop dinas untuk audit Inspektorat Kabupaten Bantul dan Bamuskal Pleret.
+                        </div>
+                    </div>
                 </div>
 
                 <div class="pt-2 flex items-center justify-end gap-2">
-                    <button type="button" onclick="App.closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 font-semibold transition">Batal</button>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-md transition flex items-center gap-2">
-                        <i data-lucide="check" class="w-4 h-4"></i> Simpan Laporan Mortalitas
+                    <button type="button" onclick="App.closeModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 font-semibold transition cursor-pointer">Batal</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-md transition flex items-center gap-2 cursor-pointer">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i> Simpan Mortalitas & Terbitkan BA
                     </button>
                 </div>
             </form>
@@ -942,40 +1031,98 @@ const BreedingModule = {
         `;
         App.setModalContent(html);
         App.openModal();
+        if (window.lucide) window.lucide.createIcons();
+    },
+
+    onDombaMatiChange(eartag) {
+        const dombaList = Store.getDomba ? Store.getDomba() : [];
+        const d = dombaList.find(item => item.eartag === eartag);
+        const box = document.getElementById("mor-ternak-info");
+        if (!box) return;
+
+        if (!d) {
+            box.classList.add("hidden");
+            return;
+        }
+
+        box.classList.remove("hidden");
+        document.getElementById("mor-prev-ras").innerText = `${d.nama || '-'} (${d.ras || 'Domba'})`;
+        document.getElementById("mor-prev-kat").innerText = `${d.kategori || 'Ternak'} • ${d.kelamin || '-'}`;
+        document.getElementById("mor-prev-lokasi").innerText = `${d.kandang || '-'} • ${d.sekat || '-'}`;
+        const bobotStr = (d.bobotTerkini || d.berat || 0).toFixed(2) + " kg";
+        const hargaStr = "Rp " + (d.hargaBeli || 0).toLocaleString('id-ID');
+        document.getElementById("mor-prev-aset").innerText = `${bobotStr} • ${hargaStr}`;
     },
 
     submitMortalitas(e) {
         e.preventDefault();
-        const eartag = document.getElementById("mor-domba")?.value;
-        const kategori = document.getElementById("mor-kategori")?.value;
+        const selDomba = document.getElementById("mor-domba");
+        const eartag = selDomba?.value;
+        const selectedOpt = selDomba?.options[selDomba.selectedIndex];
+        const dombaId = selectedOpt?.getAttribute("data-id") || "";
+        const nama = selectedOpt?.getAttribute("data-nama") || "";
+        const ras = selectedOpt?.getAttribute("data-ras") || "";
+        const kategori = selectedOpt?.getAttribute("data-kategori") || "Ternak";
+        const kandang = selectedOpt?.getAttribute("data-kandang") || "";
+        const sekat = selectedOpt?.getAttribute("data-sekat") || "";
+        const bobot = parseFloat(selectedOpt?.getAttribute("data-bobot")) || 0;
+        const harga = parseFloat(selectedOpt?.getAttribute("data-harga")) || 0;
+
         const tgl = document.getElementById("mor-tgl")?.value;
+        const jam = document.getElementById("mor-jam")?.value || "07:00 WIB";
+        const tipe = document.getElementById("mor-tipe")?.value || "Kematian Alami";
         const penyebab = document.getElementById("mor-penyebab")?.value;
         const tindakan = document.getElementById("mor-tindakan")?.value;
+        const lokasiKubur = document.getElementById("mor-lokasi-kubur")?.value;
+        const saksi1 = document.getElementById("mor-saksi1")?.value;
+        const saksi2 = document.getElementById("mor-saksi2")?.value;
+        const mengetahui = document.getElementById("mor-mengetahui")?.value;
         const catatan = document.getElementById("mor-catatan")?.value;
+        const buatBa = document.getElementById("mor-buat-ba")?.checked !== false;
 
         if (!eartag) {
-            App.showToast("Pilih domba yang meninggal!", "warning");
+            App.showToast("Pilih eartag ternak terlebih dahulu!", "warning");
             return;
         }
 
-        Store.addBreedingKematian({
+        const res = Store.addBreedingKematian({
+            dombaId: dombaId,
             eartag: eartag,
+            nama: nama,
+            ras: ras,
             kategoriTernak: kategori,
+            kandang: kandang,
+            sekat: sekat,
+            bobotTerakhir: bobot,
+            nilaiBukuAset: harga,
             tglKematian: tgl,
+            jamKematian: jam,
+            tipeKejadian: tipe,
             penyebab: penyebab,
             tindakanBangkai: tindakan,
-            catatan: catatan
+            lokasiKubur: lokasiKubur,
+            saksi1Nama: saksi1,
+            saksi2Nama: saksi2,
+            mengetahuiNama: mengetahui,
+            catatan: catatan,
+            terbitkanBA: buatBa
         });
 
         App.closeModal();
-        App.showToast(`Kasus kematian domba ${eartag} tercatat dan status ternak diubah ke 'Mati'.`, "info");
+        App.showToast(`Kasus mortalitas ${eartag} tercatat & terbit BA No. ${res.nomorSurat || '-'}!`, "success");
         if (typeof App.renderContent === "function") App.renderContent();
+
+        if (res.beritaAcaraId && confirm(`Pencatatan mortalitas ${eartag} berhasil disimpan!\nNomor Dokumen: ${res.nomorSurat || '-'}\n\nApakah Anda ingin langsung mencetak lembar Berita Acara Resmi (A4)?`)) {
+            if (window.BeritaAcaraModule) {
+                BeritaAcaraModule.cetakWindow(res.beritaAcaraId);
+            }
+        }
     },
 
     hapusMortalitas(id) {
-        if (confirm("Hapus log mortalitas ini?")) {
+        if (confirm("Apakah Anda yakin ingin menghapus data mortalitas ini?\nStatus domba terkait akan dipulihkan dan Berita Acara yang tertaut akan diselaraskan.")) {
             Store.deleteBreedingKematian(id);
-            App.showToast("Log mortalitas dihapus.", "info");
+            App.showToast("Log mortalitas dan Berita Acara terkait berhasil dihapus.", "info");
             if (typeof App.renderContent === "function") App.renderContent();
         }
     }

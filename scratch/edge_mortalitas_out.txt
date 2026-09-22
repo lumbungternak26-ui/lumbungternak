@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset="utf-8">
+    <title>Verification Mortalitas &amp; Berita Acara Sync</title>
+</head>
+<body>
+    <div id="test-results">ALL_TESTS_PASSED<br>[PASS] Store initialized with sheep data: 12 ekor<br>[PASS] Berita Acara list has at least default record: 1<br>[PASS] BreedingKematian list synchronized with Berita Acara: 1 cases<br>[PASS] First mortality has beritaAcaraId: ba-1790092087702-328<br>[PASS] First mortality has nomorSurat: 001/BA-KMT/BUMKAL-LPM/PLT/IX/2026<br>[PASS] Mortalitas created with ID: dth-1790092087703<br>[PASS] Berita Acara automatically issued: ba-1790092087703<br>[PASS] Berita Acara nomor surat valid: 002/BA-KMT/BUMKAL-LPM/PLT/IX/2026<br>[PASS] Target sheep status updated to 'Mati'<br>[PASS] Target sheep has beritaAcaraId linked<br>[PASS] Target sheep has nomorSuratBA linked<br>[PASS] Berita Acara exists in register: 002/BA-KMT/BUMKAL-LPM/PLT/IX/2026<br>[PASS] Tab mortalitas displays tested eartag: DMB-001<br>[PASS] Tab mortalitas displays official nomor surat badge: 002/BA-KMT/BUMKAL-LPM/PLT/IX/2026<br>[PASS] Tab mortalitas includes 'Cetak BA' action button<br>[PASS] Cetak BA button points to BeritaAcaraModule.cetakWindow<br>[PASS] Breeding view has Tingkat Mortalitas KPI<br>[PASS] KPI displays accurate count: 2 ekor<br>[PASS] deleteBreedingKematian returned true<br>[PASS] Sheep status restored to 'Sehat'<br>[PASS] Linked Berita Acara also cleaned up from register</div>
+
+    <!-- Scripts -->
+    <script src="js/utils/qrcode.min.js"></script>
+    <script src="js/utils/barcode.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/modules/domba.js"></script>
+    <script src="js/modules/breeding.js"></script>
+    <script src="js/modules/berita_acara.js"></script>
+
+    <script>
+        const results = [];
+        function assert(cond, msg) {
+            if (cond) {
+                results.push("[PASS] " + msg);
+            } else {
+                results.push("[FAIL] " + msg);
+                console.error("[FAIL] " + msg);
+            }
+        }
+
+        try {
+            // 1. Inisialisasi Store
+            Store.init();
+            let dombaList = Store.getDomba();
+            if (!dombaList || dombaList.length === 0) {
+                Store.seedInitialData();
+                dombaList = Store.getDomba();
+            }
+            assert(dombaList.length > 0, "Store initialized with sheep data: " + dombaList.length + " ekor");
+
+            // 2. Cek Sinkronisasi Awal
+            let baList = Store.getBeritaAcara();
+            assert(baList.length > 0, "Berita Acara list has at least default record: " + baList.length);
+
+            let matiList = Store.getBreedingKematian();
+            assert(matiList.length > 0, "BreedingKematian list synchronized with Berita Acara: " + matiList.length + " cases");
+
+            // Verify first item has linked BA
+            const firstMati = matiList[0];
+            assert(firstMati.beritaAcaraId !== undefined && firstMati.beritaAcaraId !== "", "First mortality has beritaAcaraId: " + firstMati.beritaAcaraId);
+            assert(firstMati.nomorSurat !== undefined && firstMati.nomorSurat !== "", "First mortality has nomorSurat: " + firstMati.nomorSurat);
+
+            // 3. Uji Tambah Kematian Baru via Store.addBreedingKematian
+            // Ambil domba yang masih sehat
+            const targetDomba = dombaList.find(d => d.status !== "Mati" && d.status !== "Afkir") || dombaList[0];
+            const testEartag = targetDomba.eartag;
+
+            const res = Store.addBreedingKematian({
+                dombaId: targetDomba.id,
+                eartag: testEartag,
+                nama: targetDomba.nama,
+                ras: targetDomba.ras,
+                kategoriTernak: "Indukan",
+                kandang: targetDomba.kandang,
+                sekat: targetDomba.sekat,
+                bobotTerakhir: targetDomba.bobotTerkini || 35.0,
+                nilaiBukuAset: 2500000,
+                tglKematian: "2026-09-22",
+                jamKematian: "08:15 WIB",
+                tipeKejadian: "Kematian Sakit",
+                penyebab: "Bloat / Kembung Akut",
+                tindakanBangkai: "Penguburan Biosecurity Kedalaman 1.5m",
+                lokasiKubur: "Lahan Limbah",
+                saksi1Nama: "Wahyu Pratama",
+                saksi2Nama: "Tri Haryanto",
+                mengetahuiNama: "H. Supardi",
+                catatan: "Uji coba sinkronisasi mortalitas",
+                terbitkanBA: true
+            });
+
+            assert(res.id !== undefined, "Mortalitas created with ID: " + res.id);
+            assert(res.beritaAcaraId !== undefined && res.beritaAcaraId !== "", "Berita Acara automatically issued: " + res.beritaAcaraId);
+            assert(res.nomorSurat !== undefined && res.nomorSurat.includes("BA-KMT"), "Berita Acara nomor surat valid: " + res.nomorSurat);
+
+            // Cek status domba di Master Domba berubah jadi Mati
+            const updatedDomba = Store.getDomba().find(d => d.eartag === testEartag);
+            assert(updatedDomba.status === "Mati", "Target sheep status updated to 'Mati'");
+            assert(updatedDomba.beritaAcaraId === res.beritaAcaraId, "Target sheep has beritaAcaraId linked");
+            assert(updatedDomba.nomorSuratBA === res.nomorSurat, "Target sheep has nomorSuratBA linked");
+
+            // Cek Berita Acara list memiliki dokumen ini
+            baList = Store.getBeritaAcara();
+            const createdBa = baList.find(b => b.id === res.beritaAcaraId);
+            assert(createdBa !== undefined, "Berita Acara exists in register: " + createdBa?.nomorSurat);
+
+            // 4. Uji Render UI Tab Mortalitas
+            const totalMati = Store.getBreedingKematian().length;
+            const populasiAktif = Store.getDomba().filter(d => d.status !== "Mati" && d.status !== "Terjual").length;
+            const mortalityRate = ((totalMati / (populasiAktif + totalMati)) * 100).toFixed(1);
+
+            const tabHtml = BreedingModule.renderTabMortalitas(Store.getBreedingKematian(), mortalityRate, totalMati, populasiAktif);
+            assert(tabHtml.includes(testEartag), "Tab mortalitas displays tested eartag: " + testEartag);
+            assert(tabHtml.includes(res.nomorSurat), "Tab mortalitas displays official nomor surat badge: " + res.nomorSurat);
+            assert(tabHtml.includes("Cetak BA"), "Tab mortalitas includes 'Cetak BA' action button");
+            assert(tabHtml.includes("BeritaAcaraModule.cetakWindow"), "Cetak BA button points to BeritaAcaraModule.cetakWindow");
+
+            // 5. Uji KPI Card di BreedingModule.render()
+            const fullHtml = BreedingModule.render();
+            assert(fullHtml.includes("Tingkat Mortalitas"), "Breeding view has Tingkat Mortalitas KPI");
+            assert(fullHtml.includes(totalMati + " ekor"), "KPI displays accurate count: " + totalMati + " ekor");
+
+            // 6. Uji Penghapusan (Rollback)
+            const delSuccess = Store.deleteBreedingKematian(res.id);
+            assert(delSuccess === true, "deleteBreedingKematian returned true");
+
+            const restoredDomba = Store.getDomba().find(d => d.eartag === testEartag);
+            assert(restoredDomba.status === "Sehat", "Sheep status restored to 'Sehat'");
+
+            const restoredBa = Store.getBeritaAcara().find(b => b.id === res.beritaAcaraId);
+            assert(restoredBa === undefined, "Linked Berita Acara also cleaned up from register");
+
+            document.getElementById('test-results').innerText = "ALL_TESTS_PASSED\n" + results.join("\n");
+        } catch (err) {
+            results.push("[ERROR] " + err.message + "\n" + err.stack);
+            document.getElementById('test-results').innerText = "TEST_FAILED\n" + results.join("\n");
+        }
+    </script>
+
+
+</body></html>

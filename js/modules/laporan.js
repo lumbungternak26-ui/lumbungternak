@@ -384,8 +384,8 @@ const LaporanModule = {
                                             <td class="py-3 px-4 text-slate-600 dark:text-slate-400">${d.asalTernak || 'Peternak Lokal'}</td>
                                             <td class="py-3 px-4 text-slate-600 dark:text-slate-400">${d.kategori} • ${d.kelamin}</td>
                                             <td class="py-3 px-4 text-slate-600 dark:text-slate-400">${(d.kandang || '').split('(')[0]} (${d.sekat})</td>
-                                            <td class="py-3 px-4 text-right font-mono text-slate-500">${d.bobotAwal} kg</td>
-                                            <td class="py-3 px-4 text-right font-mono font-bold text-emerald-600">${latestWeight} kg</td>
+                                            <td class="py-3 px-4 text-right font-mono text-slate-500">${Number(d.bobotAwal || 0).toFixed(2)} kg</td>
+                                            <td class="py-3 px-4 text-right font-mono font-bold text-emerald-600">${Number(latestWeight || 0).toFixed(2)} kg</td>
                                             <td class="py-3 px-4 text-center">
                                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${d.status === 'Terjual' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'}">
                                                     ${d.status}
@@ -406,9 +406,10 @@ const LaporanModule = {
     renderTabADG() {
         const dombaList = this.getFilteredDomba().filter(d => d.status !== "Mati" && d.status !== "Terjual");
         const sortedByADG = [...dombaList].sort((a, b) => (b.adg || 0) - (a.adg || 0));
-        let totalADG = 0;
-        dombaList.forEach(d => totalADG += (d.adg || 180));
-        const avgADG = Math.round(totalADG / (dombaList.length || 1));
+        const dombaWithAdg = dombaList.filter(d => typeof d.adg === 'number' && d.adg > 0);
+        const avgADG = dombaWithAdg.length > 0 
+            ? Math.round(dombaWithAdg.reduce((acc, d) => acc + d.adg, 0) / dombaWithAdg.length) 
+            : 0;
 
         return `
             <div class="space-y-6">
@@ -416,12 +417,12 @@ const LaporanModule = {
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
                         <span class="text-xs text-slate-500 font-semibold">Rata-Rata ADG Populasi</span>
-                        <div class="text-2xl font-black text-emerald-600 mt-1">+${avgADG} gram / hari</div>
+                        <div class="text-2xl font-black text-emerald-600 mt-1">${avgADG > 0 ? '+' + avgADG + ' gram / hari' : '-'}</div>
                         <span class="text-[11px] text-slate-400">Target minimal: 180 g/hari</span>
                     </div>
                     <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
                         <span class="text-xs text-slate-500 font-semibold">Performa Pertumbuhan Tertinggi</span>
-                        <div class="text-2xl font-black text-blue-600 mt-1">+${sortedByADG[0]?.adg || 255} g/hari</div>
+                        <div class="text-2xl font-black text-blue-600 mt-1">${sortedByADG[0]?.adg ? (sortedByADG[0].adg > 0 ? '+' : '') + sortedByADG[0].adg + ' g/hari' : '-'}</div>
                         <span class="text-[11px] text-slate-400">${sortedByADG[0]?.nama || '-'} (${sortedByADG[0]?.ras || '-'})</span>
                     </div>
                     <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
@@ -455,7 +456,7 @@ const LaporanModule = {
                             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                                 ${sortedByADG.map((d, idx) => {
                                     const latestWeight = d.riwayatTimbang?.length > 0 ? d.riwayatTimbang[d.riwayatTimbang.length - 1].bobot : d.bobotAwal;
-                                    const gain = Math.round((latestWeight - d.bobotAwal) * 10) / 10;
+                                    const gain = Math.round((latestWeight - d.bobotAwal) * 100) / 100;
                                     return `
                                         <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-900/30">
                                             <td class="py-3 px-4 text-center font-bold text-slate-500">#${idx + 1}</td>
@@ -464,12 +465,12 @@ const LaporanModule = {
                                                 <div class="font-semibold text-slate-800 dark:text-slate-200">${d.nama}</div>
                                             </td>
                                             <td class="py-3 px-4 text-slate-600 dark:text-slate-400">${d.ras}</td>
-                                            <td class="py-3 px-4 text-right font-mono">${d.bobotAwal} kg</td>
-                                            <td class="py-3 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">${latestWeight} kg</td>
-                                            <td class="py-3 px-4 text-right font-mono text-emerald-600 font-bold">+${gain} kg</td>
-                                            <td class="py-3 px-4 text-center font-mono font-black text-blue-600 text-sm">
-                                                +${d.adg || 180} g/hari
-                                            </td>
+                                            <td class="py-3 px-4 text-right font-mono">${Number(d.bobotAwal || 0).toFixed(2)} kg</td>
+                                            <td class="py-3 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">${Number(latestWeight || 0).toFixed(2)} kg</td>
+                                            <td class="py-3 px-4 text-right font-mono text-emerald-600 font-bold">+${Number(gain || 0).toFixed(2)} kg</td>
+                                             <td class="py-3 px-4 text-center font-mono font-black ${d.adg ? 'text-blue-600' : 'text-slate-400'} text-sm">
+                                                 ${d.adg ? (d.adg > 0 ? '+' : '') + d.adg + ' g/hari' : '-'}
+                                             </td>
                                         </tr>
                                     `;
                                 }).join('')}

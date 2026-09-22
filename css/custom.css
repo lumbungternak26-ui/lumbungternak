@@ -27,16 +27,42 @@
 
 /* Print Rules */
 @media print {
-    body {
-        background: white !important;
-        color: black !important;
+    @page {
+        size: A4 portrait;
+        margin: 10mm 12mm;
     }
-    header, aside, #toast-container, .no-print {
+    html, body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 11pt;
+        line-height: 1.35;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    /* Sembunyikan seluruh sidebar, navbar, tombol, modal overlay, dan filter */
+    #main-sidebar, header, nav, #toast, #toast-container, .no-print, 
+    .sidebar-section-header, button, #skkh-selector-bar, #ba-selector-bar {
         display: none !important;
     }
-    main {
+    #main-body-wrapper {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    #main-content-area {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+    .print-clean {
+        box-shadow: none !important;
+        border: none !important;
         padding: 0 !important;
         margin: 0 !important;
+        max-width: 100% !important;
     }
 }
 

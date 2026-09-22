@@ -51,19 +51,8 @@ const DashboardModule = {
 
         const lahanDisplay = totalLuasLahan > 0 ? `${totalLuasLahan.toLocaleString('id-ID')} m² Lahan` : '0 m² Lahan';
 
-        // Dynamic Kandang Breakdown
-        const countA = dombaList.filter(d => (d.kandang || '').includes('Kandang A')).length;
-        const countB = dombaList.filter(d => (d.kandang || '').includes('Kandang B')).length;
-        const countC = dombaList.filter(d => (d.kandang || '').includes('Kandang C')).length;
-
-        const countDorperTexelA = dombaList.filter(d => (d.kandang || '').includes('Kandang A') && ((d.ras || '').includes('Dorper') || (d.ras || '').includes('Texel'))).length;
-        const countGarutMerinoA = countA - countDorperTexelA;
-
-        const countBuntingB = dombaList.filter(d => (d.kandang || '').includes('Kandang B') && ((d.status || '') === 'Bunting' || (d.kategori || '').includes('Induk'))).length;
-        const countMenyusuiB = dombaList.filter(d => (d.kandang || '').includes('Kandang B') && ((d.kategori || '') === 'Cempe' || (d.status || '') === 'Menyusui')).length;
-
-        const countSakitC = dombaList.filter(d => (d.kandang || '').includes('Kandang C') && ((d.status || '') === 'Sakit' || (d.status || '') === 'Karantina')).length;
-        const countKarantinaLainC = countC - countSakitC;
+        // Sinkronisasi otomatis okupansi ternak di seluruh Master Kandang
+        const masterKandangList = Store.syncSekatOccupancy ? Store.syncSekatOccupancy() : Store.getMasterKandang();
 
         // Peringatan Dini Stok Pakan & Obat Menipis (ROP)
         const lowStockAlerts = Store.getLowStockAlerts ? Store.getLowStockAlerts() : [];
@@ -227,83 +216,98 @@ const DashboardModule = {
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <!-- Left: 2 Spans (Visual Data & Quick Lists) -->
                     <div class="lg:col-span-2 space-y-6">
-                        <!-- Distribusi Kandang & Ras -->
+                        <!-- Distribusi Kandang & Sekat (Sinkron Realtime dengan Master Kandang) -->
                         <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
                             <div class="flex items-center justify-between mb-4">
                                 <div>
+                                    <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold mb-1">
+                                        <i data-lucide="check-circle" class="w-3 h-3"></i> Terhubung Master Kandang
+                                    </div>
                                     <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                         <i data-lucide="layers" class="w-5 h-5 text-emerald-600"></i> Distribusi Ternak per Kandang & Sekat
                                     </h3>
-                                    <p class="text-xs text-slate-500">Pemetaan populasi aktif di fasilitas kandang terpadu Pleret</p>
+                                    <p class="text-xs text-slate-500">Pemetaan populasi aktif dan kapasitas bilik sekat fasilitas kandang terpadu Pleret</p>
                                 </div>
-                                <button onclick="App.navigate('domba')" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400">
-                                    Lihat Semua &rarr;
+                                <button onclick="App.navigate('master_kandang')" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 flex items-center gap-1 cursor-pointer">
+                                    <span>Lihat Semua Master Kandang</span>
+                                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                                 </button>
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <!-- Kandang A -->
-                                <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-3.5 bg-slate-50/50 dark:bg-slate-900/30">
-                                    <div class="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                        <span>Kandang A (Pejantan & Fattening)</span>
-                                        <span class="rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-0.5 text-[11px]">
-                                            ${countA} ekor
-                                        </span>
+                                ${masterKandangList.length === 0 ? `
+                                    <div class="col-span-full py-8 text-center text-xs text-slate-400 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                                        Belum ada fasilitas kandang terdaftar di Master Kandang.
                                     </div>
-                                    <p class="text-[11px] text-slate-500 mb-2">Target kesiapan kurban & bibit pejantan unggul</p>
-                                    <div class="space-y-1.5 text-xs">
-                                        <div class="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
-                                            <span class="text-slate-600 dark:text-slate-400">Dorper & Texel:</span>
-                                            <span class="font-semibold text-slate-800 dark:text-slate-200">${countDorperTexelA} ekor</span>
-                                        </div>
-                                        <div class="flex justify-between py-1">
-                                            <span class="text-slate-600 dark:text-slate-400">Garut & Lainnya:</span>
-                                            <span class="font-semibold text-slate-800 dark:text-slate-200">${Math.max(0, countGarutMerinoA)} ekor</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                ` : masterKandangList.map((k, idx) => {
+                                    const pct = k.kapasitasMaks > 0 ? Math.min(100, Math.round(((k.terisi || 0) / k.kapasitasMaks) * 100)) : 0;
+                                    const sekatList = Array.isArray(k.sekatList) ? k.sekatList : [];
+                                    const sekatTerisiCount = sekatList.filter(s => s.terisi > 0).length;
 
-                                <!-- Kandang B -->
-                                <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-3.5 bg-slate-50/50 dark:bg-slate-900/30">
-                                    <div class="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                        <span>Kandang B (Induk & Breeding)</span>
-                                        <span class="rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 text-[11px]">
-                                            ${countB} ekor
-                                        </span>
-                                    </div>
-                                    <p class="text-[11px] text-slate-500 mb-2">Koloni indukan laktasi & pemeliharaan cempe</p>
-                                    <div class="space-y-1.5 text-xs">
-                                        <div class="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
-                                            <span class="text-slate-600 dark:text-slate-400">Indukan Bunting:</span>
-                                            <span class="font-semibold text-amber-600 dark:text-amber-400">${countBuntingB} ekor</span>
-                                        </div>
-                                        <div class="flex justify-between py-1">
-                                            <span class="text-slate-600 dark:text-slate-400">Cempe Menyusui:</span>
-                                            <span class="font-semibold text-emerald-600 dark:text-emerald-400">${countMenyusuiB} ekor</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                    // Gaya badge warna berdasarkan index
+                                    const badgeStyles = [
+                                        "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300",
+                                        "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300",
+                                        "bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300",
+                                        "bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300",
+                                        "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300"
+                                    ];
+                                    const badgeColor = k.terisi > 0 ? badgeStyles[idx % badgeStyles.length] : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400";
 
-                                <!-- Kandang C -->
-                                <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-3.5 bg-slate-50/50 dark:bg-slate-900/30">
-                                    <div class="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                        <span>Kandang C (Karantina Medis)</span>
-                                        <span class="rounded-full bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 px-2 py-0.5 text-[11px]">
-                                            ${countC} ekor
-                                        </span>
-                                    </div>
-                                    <p class="text-[11px] text-slate-500 mb-2">Isolasi ternak sakit & kedatangan baru</p>
-                                    <div class="space-y-1.5 text-xs">
-                                        <div class="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
-                                            <span class="text-slate-600 dark:text-slate-400">Observasi Medis:</span>
-                                            <span class="font-semibold text-rose-600 dark:text-rose-400">${countSakitC} ekor</span>
+                                    return `
+                                    <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50/50 dark:bg-slate-900/30 flex flex-col justify-between hover:border-emerald-500/50 transition">
+                                        <div>
+                                            <div class="flex items-start justify-between gap-2 mb-1">
+                                                <span class="font-bold text-xs text-slate-800 dark:text-slate-200 line-clamp-1" title="${k.nama}">
+                                                    ${k.nama}
+                                                </span>
+                                                <span class="rounded-full ${badgeColor} px-2.5 py-0.5 text-[11px] font-black shrink-0">
+                                                    ${k.terisi || 0} ekor
+                                                </span>
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 mb-2.5 line-clamp-1">${k.lokasi || 'Fasilitas Pleret'} • ${k.tipeKandang || 'Panggung'}</p>
+
+                                            <div class="space-y-1.5 text-xs">
+                                                <div class="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
+                                                    <span class="text-slate-600 dark:text-slate-400">Okupansi Sekat:</span>
+                                                    <span class="font-semibold text-slate-800 dark:text-slate-200">
+                                                        ${sekatTerisiCount} / ${sekatList.length} Sekat Terisi
+                                                    </span>
+                                                </div>
+                                                <div class="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
+                                                    <span class="text-slate-600 dark:text-slate-400">Kapasitas Maks:</span>
+                                                    <span class="font-semibold text-slate-800 dark:text-slate-200">${k.kapasitasMaks || 0} Ekor</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Rincian Bilik Sekat Mini -->
+                                            <div class="mt-2.5 flex flex-wrap gap-1">
+                                                ${sekatList.slice(0, 5).map(s => `
+                                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold ${s.terisi > 0 ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200/50 dark:border-slate-700/50'}">
+                                                        ${s.nomor}: <b>${s.terisi}</b>/${s.kapasitas}
+                                                    </span>
+                                                `).join('')}
+                                                ${sekatList.length > 5 ? `<span class="px-1.5 py-0.5 text-[10px] text-slate-400 font-mono">+${sekatList.length - 5} sekat</span>` : ''}
+                                            </div>
                                         </div>
-                                        <div class="flex justify-between py-1">
-                                            <span class="text-slate-600 dark:text-slate-400">Ternak Sehat/Lain:</span>
-                                            <span class="font-semibold text-slate-600 dark:text-slate-300">${Math.max(0, countKarantinaLainC)} ekor</span>
+
+                                        <!-- Progress Bar Okupansi -->
+                                        <div class="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                                            <div class="flex justify-between text-[10px] text-slate-500 mb-1">
+                                                <span>Kepadatan Kandang:</span>
+                                                <b class="${pct > 85 ? 'text-rose-600' : (pct > 50 ? 'text-amber-600' : 'text-emerald-600')}">${pct}% Terisi</b>
+                                            </div>
+                                            <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden mb-2.5">
+                                                <div class="${pct > 85 ? 'bg-rose-500' : (pct > 50 ? 'bg-amber-500' : 'bg-emerald-500')} h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+                                            </div>
+                                            <button onclick="App.navigate('master_kandang')" class="w-full py-1.5 px-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-emerald-500 text-slate-700 dark:text-slate-300 hover:text-emerald-600 font-bold text-[11px] flex items-center justify-between transition cursor-pointer">
+                                                <span>Kelola Sekat & Koloni</span>
+                                                <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                                            </button>
                                         </div>
                                     </div>
-                                </div>
+                                    `;
+                                }).join('')}
                             </div>
                         </div>
 

@@ -547,92 +547,152 @@ const PakanKesehatanModule = {
         const stokH = stokList.find(s => s.kategori.toLowerCase() === 'hijauan') || { stokKg: 0 };
 
         App.setModalContent(`
-            <div class="p-6 space-y-4">
+            <div class="p-5 md:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
                 <div class="flex items-center justify-between border-b pb-3 dark:border-slate-700">
-                    <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950 text-teal-600 flex items-center justify-center font-bold">
-                            <i data-lucide="box" class="w-4 h-4"></i>
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+                            <i data-lucide="utensils" class="w-5 h-5"></i>
                         </div>
                         <div>
                             <h3 class="text-base font-bold text-slate-900 dark:text-white">Catat Pemberian Pakan Harian</h3>
-                            <p class="text-xs text-slate-500">Stok bahan otomatis terpotong & HPP/FCR disinkronkan</p>
+                            <p class="text-xs text-slate-500">Stok gudang otomatis terpotong & riwayat nutrisi tercatat</p>
                         </div>
                     </div>
-                    <button onclick="App.closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    <button type="button" onclick="App.closeModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
 
-                <!-- Live Warehouse Stock Banner -->
-                <div class="p-3 bg-teal-50/70 dark:bg-teal-950/30 rounded-xl border border-teal-200 dark:border-teal-800 text-[11px] space-y-1.5">
-                    <div class="font-bold text-teal-900 dark:text-teal-200 flex items-center justify-between">
-                        <span>📦 Sisa Stok Bahan di Gudang:</span>
-                        <span class="text-[10px] text-teal-600 dark:text-teal-400">Sinkron Realtime</span>
-                    </div>
-                    <div class="grid grid-cols-3 gap-2 font-mono font-bold text-slate-700 dark:text-slate-300">
-                        <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-                            Konsentrat: <span class="${stokK.stokKg < 50 ? 'text-rose-600' : 'text-emerald-600'}">${stokK.stokKg.toLocaleString('id-ID')} kg</span>
+                <form onsubmit="PakanKesehatanModule.submitPakan(event)" class="space-y-4 text-xs">
+                    <!-- Tanggal, Waktu Preset & Kandang -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-slate-50/80 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-700">
+                        <div>
+                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">📅 Tanggal Pemberian *</label>
+                            <input type="date" id="pk-tgl" required value="${new Date().toISOString().split('T')[0]}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold focus:ring-2 focus:ring-teal-500 outline-none">
                         </div>
-                        <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-                            Silase: <span class="${stokS.stokKg < 100 ? 'text-rose-600' : 'text-emerald-600'}">${stokS.stokKg.toLocaleString('id-ID')} kg</span>
-                        </div>
-                        <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-                            Hijauan Odot: <span class="${stokH.stokKg < 100 ? 'text-rose-600' : 'text-emerald-600'}">${stokH.stokKg.toLocaleString('id-ID')} kg</span>
-                        </div>
-                    </div>
-                </div>
 
-                <form onsubmit="PakanKesehatanModule.submitPakan(event)" class="space-y-3 text-xs">
-                    <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal *</label>
-                            <input type="date" id="pk-tgl" required value="${new Date().toISOString().split('T')[0]}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">🏠 Kandang Alokasi *</label>
+                            <select id="pk-kandang" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold focus:ring-2 focus:ring-teal-500 outline-none">
+                                <option value="Kandang A">Kandang A (Pejantan & Fattening)</option>
+                                <option value="Kandang B">Kandang B (Indukan & Breeding)</option>
+                                <option value="Kandang C">Kandang C (Karantina / Pemulihan)</option>
+                            </select>
                         </div>
-                        <div>
-                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Waktu Pemberian *</label>
-                            <div class="flex items-center gap-2">
-                                <select onchange="PakanKesehatanModule.onWaktuPresetChange(this.value, 'pk-waktu')" class="flex-shrink-0 p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs">
-                                    <option value="Pagi (07:30)">Pagi (07:30)</option>
-                                    <option value="Siang (12:00)">Siang (12:00)</option>
-                                    <option value="Sore (15:30)">Sore (15:30)</option>
-                                    <option value="Malam (20:00)">Malam (20:00)</option>
-                                    <option value="">✏️ Kustom...</option>
-                                </select>
-                                <input type="text" id="pk-waktu" value="Pagi (07:30)" placeholder="Ketik jam, misal: 06:45 WIB" class="flex-1 p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-semibold">
+
+                        <div class="sm:col-span-2">
+                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">⏰ Waktu Pemberian *</label>
+                            <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                                <button type="button" onclick="PakanKesehatanModule.setWaktuPreset('Pagi (07:30)', 'pk-waktu', this)" class="waktu-preset-btn px-3 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer bg-teal-600 text-white border-teal-600">
+                                    ☀️ Pagi (07:30)
+                                </button>
+                                <button type="button" onclick="PakanKesehatanModule.setWaktuPreset('Siang (12:00)', 'pk-waktu', this)" class="waktu-preset-btn px-3 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200">
+                                    🌤️ Siang (12:00)
+                                </button>
+                                <button type="button" onclick="PakanKesehatanModule.setWaktuPreset('Sore (15:30)', 'pk-waktu', this)" class="waktu-preset-btn px-3 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200">
+                                    ⛅ Sore (15:30)
+                                </button>
+                                <button type="button" onclick="PakanKesehatanModule.setWaktuPreset('Malam (20:00)', 'pk-waktu', this)" class="waktu-preset-btn px-3 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200">
+                                    🌙 Malam (20:00)
+                                </button>
+                            </div>
+                            <input type="text" id="pk-waktu" value="Pagi (07:30)" placeholder="Atau ketik jam kustom..." class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold focus:ring-2 focus:ring-teal-500 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- 3 KARTU VISUAL PAKAN -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="font-bold text-slate-800 dark:text-white text-xs uppercase tracking-wider">Takaran Pakan (kg) & Cek Sisa Stok</label>
+                            <span class="text-[11px] text-teal-600 dark:text-teal-400 font-medium">💡 Gunakan tombol - / + untuk atur cepat</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <!-- KARTU 1: KONSENTRAT -->
+                            <div class="p-3.5 rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/40 dark:bg-amber-950/20 space-y-2.5">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-slate-800 dark:text-amber-300 flex items-center gap-1.5">
+                                        🌾 Konsentrat
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${stokK.stokKg < 50 ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200'}">
+                                        Stok: ${stokK.stokKg.toLocaleString('id-ID')} kg
+                                    </span>
+                                </div>
+                                <div class="relative">
+                                    <input type="number" step="0.5" id="pk-konsentrat" value="8.0" required oninput="PakanKesehatanModule.recalcLiveTotalPakan('pk-')" class="w-full p-2.5 pr-8 rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-extrabold text-base focus:ring-2 focus:ring-amber-500 outline-none text-center">
+                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-400">kg</span>
+                                </div>
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('pk-konsentrat', -1, 'pk-')" class="flex-1 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 text-xs shadow-sm cursor-pointer">-1</button>
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('pk-konsentrat', 1, 'pk-')" class="flex-1 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 text-xs shadow-sm cursor-pointer">+1</button>
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('pk-konsentrat', 5, 'pk-')" class="flex-1 py-1 rounded-lg bg-amber-600 text-white font-bold hover:bg-amber-700 text-xs shadow-sm cursor-pointer">+5</button>
+                                </div>
+                            </div>
+
+                            <!-- KARTU 2: SILASE -->
+                            <div class="p-3.5 rounded-2xl border border-sky-200 dark:border-sky-800/60 bg-sky-50/40 dark:bg-sky-950/20 space-y-2.5">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-slate-800 dark:text-sky-300 flex items-center gap-1.5">
+                                        🌽 Silase Jagung
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${stokS.stokKg < 100 ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300' : 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200'}">
+                                        Stok: ${stokS.stokKg.toLocaleString('id-ID')} kg
+                                    </span>
+                                </div>
+                                <div class="relative">
+                                    <input type="number" step="0.5" id="pk-silase" value="14.0" required oninput="PakanKesehatanModule.recalcLiveTotalPakan('pk-')" class="w-full p-2.5 pr-8 rounded-xl border border-sky-300 dark:border-sky-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-extrabold text-base focus:ring-2 focus:ring-sky-500 outline-none text-center">
+                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-400">kg</span>
+                                </div>
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('pk-silase', -1, 'pk-')" class="flex-1 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 text-xs shadow-sm cursor-pointer">-1</button>
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('pk-silase', 1, 'pk-')" class="flex-1 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 text-xs shadow-sm cursor-pointer">+1</button>
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('pk-silase', 5, 'pk-')" class="flex-1 py-1 rounded-lg bg-sky-600 text-white font-bold hover:bg-sky-700 text-xs shadow-sm cursor-pointer">+5</button>
+                                </div>
+                            </div>
+
+                            <!-- KARTU 3: HIJAUAN ODOT -->
+                            <div class="p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/40 dark:bg-emerald-950/20 space-y-2.5">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-slate-800 dark:text-emerald-300 flex items-center gap-1.5">
+                                        🌿 Hijauan Odot
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${stokH.stokKg < 100 ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200'}">
+                                        Stok: ${stokH.stokKg.toLocaleString('id-ID')} kg
+                                    </span>
+                                </div>
+                                <div class="relative">
+                                    <input type="number" step="0.5" id="pk-odot" value="20.0" required oninput="PakanKesehatanModule.recalcLiveTotalPakan('pk-')" class="w-full p-2.5 pr-8 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-extrabold text-base focus:ring-2 focus:ring-emerald-500 outline-none text-center">
+                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-400">kg</span>
+                                </div>
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('pk-odot', -1, 'pk-')" class="flex-1 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 text-xs shadow-sm cursor-pointer">-1</button>
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('pk-odot', 1, 'pk-')" class="flex-1 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 text-xs shadow-sm cursor-pointer">+1</button>
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('pk-odot', 5, 'pk-')" class="flex-1 py-1 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 text-xs shadow-sm cursor-pointer">+5</button>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Kandang Alokasi *</label>
-                        <select id="pk-kandang" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-semibold">
-                            <option value="Kandang A">Kandang A (Pejantan & Fattening)</option>
-                            <option value="Kandang B">Kandang B (Indukan & Breeding)</option>
-                            <option value="Kandang C">Kandang C (Karantina)</option>
-                        </select>
-                    </div>
-
-                    <div class="grid grid-cols-3 gap-3">
-                        <div>
-                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Konsentrat (kg) *</label>
-                            <input type="number" step="0.5" id="pk-konsentrat" value="8.0" required class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
+                    <!-- RINGKASAN TOTAL PAKAN LIVE -->
+                    <div class="p-3.5 bg-teal-500/10 dark:bg-teal-900/30 rounded-2xl border border-teal-200 dark:border-teal-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <span class="p-2 rounded-xl bg-teal-600 text-white font-bold"><i data-lucide="scale" class="w-4 h-4"></i></span>
+                            <div>
+                                <span class="font-bold text-slate-800 dark:text-white block text-xs">Total Pakan Diberikan:</span>
+                                <span id="pk-live-breakdown" class="text-[11px] text-slate-500 dark:text-slate-400">Konsentrat: 8 kg • Silase: 14 kg • Hijauan: 20 kg</span>
+                            </div>
                         </div>
-                        <div>
-                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Silase (kg) *</label>
-                            <input type="number" step="0.5" id="pk-silase" value="14.0" required class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
-                        </div>
-                        <div>
-                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Hijauan Odot (kg) *</label>
-                            <input type="number" step="0.5" id="pk-odot" value="20.0" required class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold text-emerald-600">
+                        <div class="text-right">
+                            <span id="pk-live-total" class="font-black text-lg text-teal-700 dark:text-teal-300">42.0 kg</span>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Catatan Tambahan</label>
-                        <input type="text" id="pk-catatan" value="Nafsu makan baik, air minum ad-libitum bersih" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">📝 Catatan Respon Pakan / Kondisi Palung</label>
+                        <input type="text" id="pk-catatan" value="Nafsu makan baik, air minum ad-libitum bersih" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-teal-500 outline-none">
                     </div>
 
-                    <div class="pt-3 flex justify-end gap-2 border-t dark:border-slate-700">
-                        <button type="button" onclick="App.closeModal()" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300">Batal</button>
-                        <button type="submit" class="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold shadow-md transition active:scale-95">
+                    <div class="pt-3 flex justify-end gap-2.5 border-t dark:border-slate-700">
+                        <button type="button" onclick="App.closeModal()" class="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 cursor-pointer">Batal</button>
+                        <button type="submit" class="px-6 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold shadow-md transition active:scale-95 cursor-pointer">
                             Simpan & Kurangi Stok Gudang
                         </button>
                     </div>
@@ -640,6 +700,7 @@ const PakanKesehatanModule = {
             </div>
         `);
         App.openModal();
+        if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
     },
 
     submitPakan(e) {
@@ -912,79 +973,172 @@ const PakanKesehatanModule = {
         const log = Store.getLogPakanHarian().find(p => p.id === id);
         if (!log) return;
 
-        App.setModalContent(`
-            <div class="p-6 space-y-4">
-                <div class="flex items-center justify-between border-b pb-3 dark:border-slate-700">
-                    <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <i data-lucide="edit-3" class="w-5 h-5 text-amber-500"></i> Ubah Catatan Pakan Harian
-                    </h3>
-                    <button onclick="App.closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
-                </div>
+        const stokList = Store.getStokPakan();
+        const stokK = stokList.find(s => s.kategori.toLowerCase() === 'konsentrat') || { stokKg: 0 };
+        const stokS = stokList.find(s => s.kategori.toLowerCase() === 'silase') || { stokKg: 0 };
+        const stokH = stokList.find(s => s.kategori.toLowerCase() === 'hijauan') || { stokKg: 0 };
 
-                <form onsubmit="PakanKesehatanModule.submitEditLogPakan(event, '${log.id}')" class="space-y-3 text-xs">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal *</label>
-                            <input type="date" id="epk-tgl" required value="${log.tgl}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+        const totalPakan = ((log.konsentratKg || 0) + (log.silaseKg || 0) + (log.hijauanOdotKg || 0)).toFixed(1);
+
+        App.setModalContent(`
+            <div class="p-5 md:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between border-b pb-3 dark:border-slate-700">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                            <i data-lucide="edit-3" class="w-5 h-5"></i>
                         </div>
                         <div>
-                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Waktu Pemberian *</label>
-                            <div class="flex items-center gap-2">
-                                <select onchange="PakanKesehatanModule.onWaktuPresetChange(this.value, 'epk-waktu')" class="flex-shrink-0 p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs">
-                                    <option value="Pagi (07:30)" ${log.waktu && log.waktu.includes('Pagi') ? 'selected' : ''}>Pagi (07:30)</option>
-                                    <option value="Siang (12:00)" ${log.waktu && log.waktu.includes('Siang') ? 'selected' : ''}>Siang (12:00)</option>
-                                    <option value="Sore (15:30)" ${log.waktu && log.waktu.includes('Sore') ? 'selected' : ''}>Sore (15:30)</option>
-                                    <option value="Malam (20:00)" ${log.waktu && log.waktu.includes('Malam') ? 'selected' : ''}>Malam (20:00)</option>
-                                    <option value="" ${log.waktu && !log.waktu.includes('Pagi') && !log.waktu.includes('Siang') && !log.waktu.includes('Sore') && !log.waktu.includes('Malam') ? 'selected' : ''}>✏️ Kustom...</option>
-                                </select>
-                                <input type="text" id="epk-waktu" value="${log.waktu || ''}" placeholder="Ketik jam, misal: 06:45 WIB" class="flex-1 p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-semibold">
+                            <h3 class="text-base font-bold text-slate-900 dark:text-white">Ubah Catatan Pakan Harian</h3>
+                            <p class="text-xs text-slate-500">Koreksi takaran pakan, jadwal pemberian, atau kandang</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="App.closeModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+
+                <form onsubmit="PakanKesehatanModule.submitEditLogPakan(event, '${log.id}')" class="space-y-4 text-xs">
+                    <!-- Tanggal, Waktu Preset & Kandang -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-slate-50/80 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-700">
+                        <div>
+                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">📅 Tanggal Pemberian *</label>
+                            <input type="date" id="epk-tgl" required value="${log.tgl}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold focus:ring-2 focus:ring-amber-500 outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">🏠 Kandang Alokasi *</label>
+                            <select id="epk-kandang" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold focus:ring-2 focus:ring-amber-500 outline-none">
+                                <option value="Kandang A" ${log.kandang === 'Kandang A' ? 'selected' : ''}>Kandang A (Pejantan & Fattening)</option>
+                                <option value="Kandang B" ${log.kandang === 'Kandang B' ? 'selected' : ''}>Kandang B (Indukan & Breeding)</option>
+                                <option value="Kandang C" ${log.kandang === 'Kandang C' ? 'selected' : ''}>Kandang C (Karantina / Pemulihan)</option>
+                            </select>
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">⏰ Waktu Pemberian *</label>
+                            <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                                <button type="button" onclick="PakanKesehatanModule.setWaktuPreset('Pagi (07:30)', 'epk-waktu', this)" class="waktu-preset-btn px-3 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer ${log.waktu && log.waktu.includes('Pagi') ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}">
+                                    ☀️ Pagi (07:30)
+                                </button>
+                                <button type="button" onclick="PakanKesehatanModule.setWaktuPreset('Siang (12:00)', 'epk-waktu', this)" class="waktu-preset-btn px-3 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer ${log.waktu && log.waktu.includes('Siang') ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}">
+                                    🌤️ Siang (12:00)
+                                </button>
+                                <button type="button" onclick="PakanKesehatanModule.setWaktuPreset('Sore (15:30)', 'epk-waktu', this)" class="waktu-preset-btn px-3 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer ${log.waktu && log.waktu.includes('Sore') ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}">
+                                    ⛅ Sore (15:30)
+                                </button>
+                                <button type="button" onclick="PakanKesehatanModule.setWaktuPreset('Malam (20:00)', 'epk-waktu', this)" class="waktu-preset-btn px-3 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer ${log.waktu && log.waktu.includes('Malam') ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}">
+                                    🌙 Malam (20:00)
+                                </button>
+                            </div>
+                            <input type="text" id="epk-waktu" value="${log.waktu || 'Pagi (07:30)'}" placeholder="Atau ketik jam kustom..." class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold focus:ring-2 focus:ring-amber-500 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- 3 KARTU VISUAL PAKAN -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="font-bold text-slate-800 dark:text-white text-xs uppercase tracking-wider">Takaran Pakan (kg)</label>
+                            <span class="text-[11px] text-amber-600 dark:text-amber-400 font-medium">💡 Gunakan tombol - / + untuk atur cepat</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <!-- KARTU 1: KONSENTRAT -->
+                            <div class="p-3.5 rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/40 dark:bg-amber-950/20 space-y-2.5">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-slate-800 dark:text-amber-300 flex items-center gap-1.5">
+                                        🌾 Konsentrat
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
+                                        Stok: ${stokK.stokKg.toLocaleString('id-ID')} kg
+                                    </span>
+                                </div>
+                                <div class="relative">
+                                    <input type="number" step="0.5" id="epk-konsentrat" value="${log.konsentratKg}" required oninput="PakanKesehatanModule.recalcLiveTotalPakan('epk-')" class="w-full p-2.5 pr-8 rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-extrabold text-base focus:ring-2 focus:ring-amber-500 outline-none text-center">
+                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-400">kg</span>
+                                </div>
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('epk-konsentrat', -1, 'epk-')" class="flex-1 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 text-xs shadow-sm cursor-pointer">-1</button>
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('epk-konsentrat', 1, 'epk-')" class="flex-1 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 text-xs shadow-sm cursor-pointer">+1</button>
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('epk-konsentrat', 5, 'epk-')" class="flex-1 py-1 rounded-lg bg-amber-600 text-white font-bold hover:bg-amber-700 text-xs shadow-sm cursor-pointer">+5</button>
+                                </div>
+                            </div>
+
+                            <!-- KARTU 2: SILASE -->
+                            <div class="p-3.5 rounded-2xl border border-sky-200 dark:border-sky-800/60 bg-sky-50/40 dark:bg-sky-950/20 space-y-2.5">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-slate-800 dark:text-sky-300 flex items-center gap-1.5">
+                                        🌽 Silase Jagung
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200">
+                                        Stok: ${stokS.stokKg.toLocaleString('id-ID')} kg
+                                    </span>
+                                </div>
+                                <div class="relative">
+                                    <input type="number" step="0.5" id="epk-silase" value="${log.silaseKg}" required oninput="PakanKesehatanModule.recalcLiveTotalPakan('epk-')" class="w-full p-2.5 pr-8 rounded-xl border border-sky-300 dark:border-sky-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-extrabold text-base focus:ring-2 focus:ring-sky-500 outline-none text-center">
+                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-400">kg</span>
+                                </div>
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('epk-silase', -1, 'epk-')" class="flex-1 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 text-xs shadow-sm cursor-pointer">-1</button>
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('epk-silase', 1, 'epk-')" class="flex-1 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 text-xs shadow-sm cursor-pointer">+1</button>
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('epk-silase', 5, 'epk-')" class="flex-1 py-1 rounded-lg bg-sky-600 text-white font-bold hover:bg-sky-700 text-xs shadow-sm cursor-pointer">+5</button>
+                                </div>
+                            </div>
+
+                            <!-- KARTU 3: HIJAUAN ODOT -->
+                            <div class="p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/40 dark:bg-emerald-950/20 space-y-2.5">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-slate-800 dark:text-emerald-300 flex items-center gap-1.5">
+                                        🌿 Hijauan Odot
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200">
+                                        Stok: ${stokH.stokKg.toLocaleString('id-ID')} kg
+                                    </span>
+                                </div>
+                                <div class="relative">
+                                    <input type="number" step="0.5" id="epk-odot" value="${log.hijauanOdotKg}" required oninput="PakanKesehatanModule.recalcLiveTotalPakan('epk-')" class="w-full p-2.5 pr-8 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-extrabold text-base focus:ring-2 focus:ring-emerald-500 outline-none text-center">
+                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-400">kg</span>
+                                </div>
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('epk-odot', -1, 'epk-')" class="flex-1 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 text-xs shadow-sm cursor-pointer">-1</button>
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('epk-odot', 1, 'epk-')" class="flex-1 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 text-xs shadow-sm cursor-pointer">+1</button>
+                                    <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('epk-odot', 5, 'epk-')" class="flex-1 py-1 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 text-xs shadow-sm cursor-pointer">+5</button>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Kandang Alokasi *</label>
-                        <select id="epk-kandang" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
-                            <option value="Kandang A" ${log.kandang === 'Kandang A' ? 'selected' : ''}>Kandang A (Pejantan & Fattening)</option>
-                            <option value="Kandang B" ${log.kandang === 'Kandang B' ? 'selected' : ''}>Kandang B (Indukan & Breeding)</option>
-                            <option value="Kandang C" ${log.kandang === 'Kandang C' ? 'selected' : ''}>Kandang C (Karantina)</option>
-                        </select>
-                    </div>
-
-                    <div class="grid grid-cols-3 gap-3">
-                        <div>
-                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Konsentrat (kg)</label>
-                            <input type="number" step="0.5" id="epk-konsentrat" value="${log.konsentratKg}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
+                    <!-- RINGKASAN TOTAL PAKAN LIVE -->
+                    <div class="p-3.5 bg-amber-500/10 dark:bg-amber-900/30 rounded-2xl border border-amber-200 dark:border-amber-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <span class="p-2 rounded-xl bg-amber-500 text-white font-bold"><i data-lucide="scale" class="w-4 h-4"></i></span>
+                            <div>
+                                <span class="font-bold text-slate-800 dark:text-white block text-xs">Total Pakan Diberikan:</span>
+                                <span id="epk-live-breakdown" class="text-[11px] text-slate-500 dark:text-slate-400">Konsentrat: ${log.konsentratKg} kg • Silase: ${log.silaseKg} kg • Hijauan: ${log.hijauanOdotKg} kg</span>
+                            </div>
                         </div>
-                        <div>
-                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Silase (kg)</label>
-                            <input type="number" step="0.5" id="epk-silase" value="${log.silaseKg}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
-                        </div>
-                        <div>
-                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Hijauan Odot (kg)</label>
-                            <input type="number" step="0.5" id="epk-odot" value="${log.hijauanOdotKg}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold text-emerald-600">
+                        <div class="text-right">
+                            <span id="epk-live-total" class="font-black text-lg text-amber-700 dark:text-amber-300">${totalPakan} kg</span>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Petugas Pakan *</label>
-                            <input type="text" id="epk-petugas" required value="${log.petugas || ''}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">👤 Petugas Pakan *</label>
+                            <input type="text" id="epk-petugas" required value="${log.petugas || ''}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500 outline-none">
                         </div>
                         <div>
-                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Catatan Respon Ternak</label>
-                            <input type="text" id="epk-catatan" value="${log.catatan || ''}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">📝 Catatan Respon Ternak</label>
+                            <input type="text" id="epk-catatan" value="${log.catatan || ''}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500 outline-none">
                         </div>
                     </div>
 
-                    <div class="pt-3 flex justify-end gap-2 border-t dark:border-slate-700">
-                        <button type="button" onclick="App.closeModal()" class="px-4 py-2 rounded-xl border border-slate-300 font-semibold text-slate-600">Batal</button>
-                        <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-md">Simpan Perubahan</button>
+                    <div class="pt-3 flex justify-end gap-2.5 border-t dark:border-slate-700">
+                        <button type="button" onclick="App.closeModal()" class="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 cursor-pointer">Batal</button>
+                        <button type="submit" class="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-md transition active:scale-95 cursor-pointer">Simpan Perubahan</button>
                     </div>
                 </form>
             </div>
         `);
         App.openModal();
+        if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
     },
 
     submitEditLogPakan(e, id) {
@@ -1011,6 +1165,55 @@ const PakanKesehatanModule = {
             Store.deleteLogPakanHarian(id);
             App.showToast("Catatan pakan telah dihapus.", "success");
             App.renderContent();
+        }
+    },
+
+    setWaktuPreset(presetVal, targetInputId, activeBtn) {
+        const input = document.getElementById(targetInputId);
+        if (input) {
+            input.value = presetVal;
+        }
+        if (activeBtn && activeBtn.parentElement) {
+            const btns = activeBtn.parentElement.querySelectorAll('.waktu-preset-btn');
+            btns.forEach(b => {
+                b.classList.remove('bg-teal-600', 'bg-amber-600', 'text-white', 'border-teal-600', 'border-amber-600');
+                b.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300', 'border-slate-200', 'dark:border-slate-700');
+            });
+            const activeColor = targetInputId.startsWith('e') ? 'bg-amber-600 border-amber-600' : 'bg-teal-600 border-teal-600';
+            activeBtn.classList.remove('bg-slate-100', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300', 'border-slate-200', 'dark:border-slate-700');
+            activeBtn.className += ` text-white ${activeColor}`;
+        }
+    },
+
+    adjustPakanQty(inputId, delta, prefix = 'pk-') {
+        const el = document.getElementById(inputId);
+        if (!el) return;
+        let current = parseFloat(el.value) || 0;
+        let nextVal = Math.max(0, parseFloat((current + delta).toFixed(1)));
+        el.value = nextVal;
+        this.recalcLiveTotalPakan(prefix);
+    },
+
+    recalcLiveTotalPakan(prefix = 'pk-') {
+        const kEl = document.getElementById(prefix + 'konsentrat');
+        const sEl = document.getElementById(prefix + 'silase');
+        const oEl = document.getElementById(prefix + 'odot');
+        const totalEl = document.getElementById(prefix + 'live-total');
+        const breakdownEl = document.getElementById(prefix + 'live-breakdown');
+
+        const k = parseFloat(kEl ? kEl.value : 0) || 0;
+        const s = parseFloat(sEl ? sEl.value : 0) || 0;
+        const o = parseFloat(oEl ? oEl.value : 0) || 0;
+        const total = (k + s + o).toFixed(1);
+
+        if (totalEl) totalEl.textContent = `${total} kg`;
+        if (breakdownEl) breakdownEl.textContent = `Konsentrat: ${k} kg • Silase: ${s} kg • Hijauan: ${o} kg`;
+    },
+
+    onWaktuPresetChange(val, targetId) {
+        if (val) {
+            const el = document.getElementById(targetId);
+            if (el) el.value = val;
         }
     },
 

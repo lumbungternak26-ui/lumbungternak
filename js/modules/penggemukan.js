@@ -296,8 +296,8 @@ const PenggemukanModule = {
         const dombaList = Store.getDomba();
         let allTimbang = [];
         dombaList.forEach(d => {
-            (d.riwayatTimbang || []).forEach(r => {
-                allTimbang.push({ eartag: d.eartag, nama: d.nama, ras: d.ras, kategori: d.kategori, kandang: d.kandang, sekat: d.sekat, ...r });
+            (d.riwayatTimbang || []).forEach((r, idx) => {
+                allTimbang.push({ eartag: d.eartag, dombaId: d.id, nama: d.nama, ras: d.ras, kategori: d.kategori, kandang: d.kandang, sekat: d.sekat, rawIndex: idx, ...r });
             });
         });
         allTimbang.sort((a, b) => new Date(b.tgl) - new Date(a.tgl));
@@ -310,7 +310,7 @@ const PenggemukanModule = {
                             <i data-lucide="trending-up" class="w-3.5 h-3.5"></i> Pertumbuhan Bobot
                         </div>
                         <h2 class="text-xl font-bold text-slate-900 dark:text-white">History Penimbangan & Analisis ADG</h2>
-                        <p class="text-xs text-slate-500">Log lengkap seluruh rekaman timbangan ternak dengan laju pertambahan berat badan harian.</p>
+                        <p class="text-xs text-slate-500">Log lengkap seluruh rekaman timbangan ternak dengan laju pertambahan berat badan harian. Anda dapat mengedit tanggal & bobot terbaru kapan saja.</p>
                     </div>
                     <button onclick="App.openModal('modal-timbang')" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md transition active:scale-95">
                         <i data-lucide="scale" class="w-4 h-4"></i> Catat Timbang Baru
@@ -328,20 +328,33 @@ const PenggemukanModule = {
                                     <th class="py-3 px-4">Lokasi Sekat</th>
                                     <th class="py-3 px-4 text-right">Bobot Timbang</th>
                                     <th class="py-3 px-4">Catatan Perkembangan</th>
+                                    <th class="py-3 px-4 text-center">Aksi Edit</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                                ${allTimbang.map(r => `
+                                ${allTimbang.length === 0 ? `
+                                    <tr>
+                                        <td colspan="7" class="py-8 text-center text-slate-400">Belum ada rekaman penimbangan.</td>
+                                    </tr>
+                                ` : allTimbang.map(r => `
                                     <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-900/30">
                                         <td class="py-3 px-4 font-semibold text-slate-700 dark:text-slate-300">${r.tgl}</td>
                                         <td class="py-3 px-4">
-                                            <span class="font-bold text-slate-900 dark:text-white">${r.eartag}</span>
-                                            <div class="text-[11px] text-slate-500">${r.nama}</div>
+                                            <span class="font-bold text-slate-900 dark:text-white font-mono">${r.eartag}</span>
+                                            <div class="text-[11px] text-slate-500">${r.nama || '-'}</div>
                                         </td>
-                                        <td class="py-3 px-4">${r.ras} (${r.kategori})</td>
-                                        <td class="py-3 px-4">${r.kandang.split('(')[0]} / ${r.sekat}</td>
-                                        <td class="py-3 px-4 text-right font-black text-emerald-600 dark:text-emerald-400 text-sm">${r.bobot} kg</td>
+                                        <td class="py-3 px-4">${r.ras || '-'} (${r.kategori || '-'})</td>
+                                        <td class="py-3 px-4">${(r.kandang || '').split('(')[0]} / ${r.sekat || '-'}</td>
+                                        <td class="py-3 px-4 text-right font-black text-emerald-600 dark:text-emerald-400 text-sm font-mono">${Number(r.bobot || 0).toFixed(2)} kg</td>
                                         <td class="py-3 px-4 text-slate-600 dark:text-slate-400 italic">${r.catatan || 'Penimbangan rutin'}</td>
+                                        <td class="py-3 px-4 text-center whitespace-nowrap">
+                                            <button type="button" onclick="PenggemukanModule.openModalEditTimbang('${r.eartag}', ${r.rawIndex})" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 transition inline-flex items-center gap-1 shadow-sm mr-1.5" title="Edit Hasil Penimbangan">
+                                                <i data-lucide="edit-2" class="w-3.5 h-3.5"></i> Edit Bobot
+                                            </button>
+                                            <button type="button" onclick="PenggemukanModule.hapusRiwayatTimbang('${r.eartag}', ${r.rawIndex})" class="p-1 text-slate-400 hover:text-rose-600 transition rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30" title="Hapus Log Timbang">
+                                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -350,6 +363,85 @@ const PenggemukanModule = {
                 </div>
             </div>
         `;
+    },
+
+    openModalEditTimbang(eartag, index) {
+        const domba = Store.getDomba().find(d => d.eartag === eartag);
+        if (!domba || !domba.riwayatTimbang || !domba.riwayatTimbang[index]) {
+            App.showToast("Data riwayat timbang tidak ditemukan!", "error");
+            return;
+        }
+        const record = domba.riwayatTimbang[index];
+        const bobotVal = parseFloat(record.bobot || 0).toFixed(2);
+
+        App.setModalContent(`
+            <div class="p-6 space-y-4 max-w-md mx-auto">
+                <div class="flex items-center justify-between border-b pb-3 dark:border-slate-700">
+                    <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i data-lucide="scale" class="w-5 h-5 text-indigo-600"></i> Edit Hasil Penimbangan
+                    </h3>
+                    <button onclick="App.closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+
+                <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs space-y-1">
+                    <div class="flex justify-between"><span class="text-slate-500">Nomor Eartag:</span><b class="font-mono text-slate-800 dark:text-slate-200">${domba.eartag}</b></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Nama / Ras:</span><span class="font-bold">${domba.nama || '-'} (${domba.ras || '-'})</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Kandang / Sekat:</span><span>${domba.kandang} / ${domba.sekat}</span></div>
+                </div>
+
+                <form onsubmit="PenggemukanModule.submitEditTimbang(event, '${eartag}', ${index})" class="space-y-3.5 text-xs">
+                    <div>
+                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tanggal Penimbangan *</label>
+                        <input type="date" id="et-tgl" required value="${record.tgl || ''}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-semibold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Bobot Timbang (kg) *</label>
+                        <input type="number" step="0.01" min="1" max="250" id="et-bobot" required value="${bobotVal}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-mono font-bold text-base text-emerald-600 dark:text-emerald-400">
+                        <span class="text-[10px] text-slate-400 mt-0.5 block">Format 2 digit di belakang koma (misal: 32.75 kg)</span>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Catatan Perkembangan</label>
+                        <input type="text" id="et-catatan" value="${record.catatan || ''}" placeholder="Misal: Pertumbuhan pesat, nafsu makan tinggi" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+                    </div>
+
+                    <div class="pt-3 border-t dark:border-slate-700 flex justify-end gap-2">
+                        <button type="button" onclick="App.closeModal()" class="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300">Batal</button>
+                        <button type="submit" class="px-5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-md">Simpan Perubahan</button>
+                    </div>
+                </form>
+            </div>
+        `);
+        App.openModal();
+    },
+
+    submitEditTimbang(e, eartag, index) {
+        e.preventDefault();
+        const newTgl = document.getElementById("et-tgl").value;
+        const newBobot = parseFloat(document.getElementById("et-bobot").value);
+        const newCatatan = document.getElementById("et-catatan").value.trim();
+
+        if (isNaN(newBobot) || newBobot <= 0) {
+            App.showToast("Bobot ternak harus berupa angka valid lebih dari 0!", "error");
+            return;
+        }
+
+        const ok = Store.updateRiwayatTimbang(eartag, index, newTgl, newBobot, newCatatan);
+        if (ok) {
+            App.closeModal();
+            App.showToast(`Bobot ${eartag} berhasil diperbarui menjadi ${newBobot.toFixed(2)} kg!`, "success");
+            App.renderContent();
+        } else {
+            App.showToast("Gagal memperbarui bobot ternak.", "error");
+        }
+    },
+
+    hapusRiwayatTimbang(eartag, index) {
+        if (!confirm(`Apakah Anda yakin ingin menghapus data penimbangan untuk domba ${eartag}?`)) return;
+        const ok = Store.deleteRiwayatTimbang(eartag, index);
+        if (ok) {
+            App.showToast(`Data timbang untuk ${eartag} berhasil dihapus.`, "success");
+            App.renderContent();
+        }
     },
 
     // 5. CETAK STIKER QR (GENERATOR CETAK STIKER MULTI-QR CODE)
@@ -622,17 +714,17 @@ const PenggemukanModule = {
     downloadTemplateExcel() {
         const headers = ["Eartag", "WarnaEartag", "Nama", "Ras", "AsalTernak", "Kelamin", "Kategori", "Kandang", "Sekat", "BobotAwal", "HargaBeli", "Status", "TanggalMasuk"];
         const rows = [
-            ["DMB-099", "Kuning", "Bima Super", "Dorper Cross", "Pasar Hewan Imogiri", "Jantan", "Fattening", "Kandang A", "Sekat 05", "30.5", "3000000", "Sehat", "2026-08-01"],
-            ["DMB-100", "Hijau", "Dewi Kunti", "Texel Wonosobo", "Peternak Rakyat Pleret", "Betina", "Indukan", "Kandang B", "Sekat 05", "32.0", "3200000", "Sehat", "2026-08-01"],
-            ["DMB-101", "Merah", "Gatot Subroto", "Garut Tangkas", "Peternak Bantul", "Jantan", "Pejantan", "Kandang A", "Sekat 06", "42.0", "4200000", "Sehat", "2026-08-01"]
+            ["DMB-099", "Kuning", "Bima Super", "Dorper Cross", "Pasar Hewan Imogiri", "Jantan", "Fattening", "Kandang A", "Sekat 05", "30.50", "3000000", "Sehat", "2026-08-01"],
+            ["DMB-100", "Hijau", "Dewi Kunti", "Texel Wonosobo", "Peternak Rakyat Pleret", "Betina", "Indukan", "Kandang B", "Sekat 05", "32.25", "3200000", "Sehat", "2026-08-01"],
+            ["DMB-101", "Merah", "Gatot Subroto", "Garut Tangkas", "Peternak Bantul", "Jantan", "Pejantan", "Kandang A", "Sekat 06", "42.75", "4200000", "Sehat", "2026-08-01"]
         ];
         ExportImport.exportExcelTable("template_import_domba_bumkal", headers, rows, "Template Import Masal Data Domba", "Template_Ternak");
     },
 
     downloadTemplateCSVSemicolon() {
         const header = "Eartag;WarnaEartag;Nama;Ras;AsalTernak;Kelamin;Kategori;Kandang;Sekat;BobotAwal;HargaBeli;Status;TanggalMasuk\r\n";
-        const sample1 = "DMB-099;Kuning;Bima Super;Dorper Cross;Pasar Hewan Imogiri;Jantan;Fattening;Kandang A;Sekat 05;30.5;3000000;Sehat;2026-08-01\r\n";
-        const sample2 = "DMB-100;Hijau;Dewi Kunti;Texel Wonosobo;Peternak Rakyat Pleret;Betina;Indukan;Kandang B;Sekat 05;32.0;3200000;Sehat;2026-08-01\r\n";
+        const sample1 = "DMB-099;Kuning;Bima Super;Dorper Cross;Pasar Hewan Imogiri;Jantan;Fattening;Kandang A;Sekat 05;30.50;3000000;Sehat;2026-08-01\r\n";
+        const sample2 = "DMB-100;Hijau;Dewi Kunti;Texel Wonosobo;Peternak Rakyat Pleret;Betina;Indukan;Kandang B;Sekat 05;32.25;3200000;Sehat;2026-08-01\r\n";
         const blob = new Blob(["\uFEFF" + header + sample1 + sample2], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -717,6 +809,13 @@ const PenggemukanModule = {
                 return val;
             };
 
+            const parseWeight = (val) => {
+                if (!val) return 25.00;
+                const clean = String(val).replace(',', '.').replace(/[^0-9.]/g, '');
+                const num = parseFloat(clean);
+                return isNaN(num) ? 25.00 : parseFloat(num.toFixed(2));
+            };
+
             const parsedRows = [];
             for (let i = 1; i < lines.length; i++) {
                 const cols = this.parseCSVLine(lines[i], delim);
@@ -732,7 +831,7 @@ const PenggemukanModule = {
                             kategori: cols[6] || "Fattening",
                             kandang: cols[7] || "Kandang A",
                             sekat: cols[8] || "Sekat 01",
-                            bobotAwal: parseFloat(cols[9]) || 25,
+                            bobotAwal: parseWeight(cols[9]),
                             hargaBeli: parseFloat(cols[10]) || 2500000,
                             status: cols[11] || "Sehat",
                             tglMasuk: parseDateInput(cols[12])
@@ -748,7 +847,7 @@ const PenggemukanModule = {
                             kategori: cols[4] || "Fattening",
                             kandang: cols[5] || "Kandang A",
                             sekat: cols[6] || "Sekat 01",
-                            bobotAwal: parseFloat(cols[7]) || 25,
+                            bobotAwal: parseWeight(cols[7]),
                             hargaBeli: parseFloat(cols[8]) || 2500000,
                             status: cols[9] || "Sehat",
                             tglMasuk: parseDateInput(cols[10])
@@ -788,7 +887,7 @@ const PenggemukanModule = {
                         <td class="p-2 text-slate-600 dark:text-slate-400">${d.kategori}</td>
                         <td class="p-2 text-slate-600 dark:text-slate-400">${d.kandang}</td>
                         <td class="p-2 text-slate-600 dark:text-slate-400">${d.sekat}</td>
-                        <td class="p-2 font-bold text-slate-800 dark:text-slate-200">${d.bobotAwal} kg</td>
+                        <td class="p-2 font-bold text-slate-800 dark:text-slate-200">${Number(d.bobotAwal || 0).toFixed(2)} kg</td>
                         <td class="p-2 text-slate-600 dark:text-slate-400">Rp ${(d.hargaBeli).toLocaleString('id-ID')}</td>
                         <td class="p-2"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">${d.status || 'Sehat'}</span></td>
                         <td class="p-2 font-semibold text-emerald-600">${d.tglMasuk || defaultNow}</td>
@@ -813,6 +912,7 @@ const PenggemukanModule = {
         const now = new Date().toISOString().split("T")[0];
 
         this.pendingImportData.forEach((row, idx) => {
+            const initialWeight = parseFloat(Number(row.bobotAwal || 0).toFixed(2));
             const newD = {
                 id: "dmb-imp-" + Date.now() + "-" + idx,
                 eartag: row.eartag,
@@ -824,14 +924,14 @@ const PenggemukanModule = {
                 kategori: row.kategori,
                 kandang: row.kandang,
                 sekat: row.sekat,
-                bobotAwal: row.bobotAwal,
+                bobotAwal: initialWeight,
                 hargaBeli: row.hargaBeli,
                 status: row.status,
                 tglLahir: "2025-01-01",
                 tglMasuk: row.tglMasuk || now,
                 adg: 0,
                 foto: "https://images.unsplash.com/photo-1484557052118-f32bd25b45b5?auto=format&fit=crop&w=600&q=80",
-                riwayatTimbang: [{ tgl: row.tglMasuk || now, bobot: row.bobotAwal, catatan: "Import Berkas Spreadsheet" }],
+                riwayatTimbang: [{ tgl: row.tglMasuk || now, bobot: initialWeight, catatan: "Import Berkas Spreadsheet" }],
                 rekamMedis: [],
                 riwayatKawin: []
             };

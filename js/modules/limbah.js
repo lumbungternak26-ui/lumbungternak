@@ -45,7 +45,7 @@ const LimbahModule = {
                         <p class="text-xs text-slate-500">Mengubah feses dan urin domba menjadi Pupuk Organik Padat (POP) super halus dan Pupuk Organik Cair (POC) kaya nitrogen & mikroba.</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="App.openModal('modal-batch-limbah')" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-purple-600 hover:bg-purple-700 text-white shadow-md transition active:scale-95">
+                        <button onclick="LimbahModule.openModalBatchBaru()" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-purple-600 hover:bg-purple-700 text-white shadow-md transition active:scale-95">
                             <i data-lucide="plus-circle" class="w-4 h-4"></i> Buat Batch Kompos
                         </button>
                         <button onclick="App.openModal('modal-kohe')" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-700 text-white shadow-md transition active:scale-95">
@@ -246,16 +246,29 @@ const LimbahModule = {
                                     <th class="py-2.5 px-4 text-right">Urin (Liter)</th>
                                     <th class="py-2.5 px-4">Petugas Kebersihan</th>
                                     <th class="py-2.5 px-4">Catatan Kondisi</th>
+                                    <th class="py-2.5 px-4 text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                                ${koheHarian.map(k => `
+                                ${koheHarian.length === 0 ? `
+                                    <tr><td colspan="6" class="py-8 text-center text-xs text-slate-400">Belum ada catatan input kohe harian.</td></tr>
+                                ` : koheHarian.map((k, idx) => `
                                     <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-900/30">
                                         <td class="py-2.5 px-4 font-semibold text-slate-800 dark:text-slate-200">${k.tgl}</td>
                                         <td class="py-2.5 px-4 text-right font-bold text-amber-700 dark:text-amber-400">${k.fesesPadatKg} kg</td>
                                         <td class="py-2.5 px-4 text-right font-bold text-purple-700 dark:text-purple-400">${k.urinLiter} L</td>
                                         <td class="py-2.5 px-4 text-slate-600 dark:text-slate-400">${k.petugas}</td>
                                         <td class="py-2.5 px-4 text-slate-500">${k.catatan}</td>
+                                        <td class="py-2.5 px-4 text-center">
+                                            <div class="flex items-center justify-center gap-1.5">
+                                                <button onclick="LimbahModule.openModalEditKohe(${idx})" class="px-2 py-1 text-[11px] font-bold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 flex items-center gap-1 transition active:scale-95" title="Edit Catatan Kohe">
+                                                    <i data-lucide="edit-3" class="w-3 h-3"></i> Edit
+                                                </button>
+                                                <button onclick="LimbahModule.deleteKohe(${idx})" class="p-1 rounded-lg border border-rose-200 hover:bg-rose-50 text-rose-600 dark:border-rose-900/60 dark:hover:bg-rose-950/40 transition active:scale-95" title="Hapus Catatan Kohe">
+                                                    <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -506,6 +519,78 @@ const LimbahModule = {
         if (confirm(`Apakah Anda yakin ingin menghapus batch fermentasi ${batchId}?`)) {
             Store.deleteBatchLimbah(batchId);
             App.showToast(`Batch fermentasi ${batchId} berhasil dihapus!`, "success");
+            App.renderContent();
+        }
+    },
+
+    openModalEditKohe(idx) {
+        const koheHarian = Store.getKoheHarian();
+        const k = koheHarian[idx];
+        if (!k) return;
+
+        App.setModalContent(`
+            <div class="p-6 space-y-4">
+                <div class="flex items-center justify-between border-b pb-3 dark:border-slate-700">
+                    <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i data-lucide="edit-3" class="w-5 h-5 text-amber-600"></i> Edit Log Pengumpulan Kotoran Harian
+                    </h3>
+                    <button onclick="App.closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+
+                <form onsubmit="LimbahModule.submitEditKohe(event, ${idx})" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal Pembersihan Kandang *</label>
+                        <input type="date" id="ek-tgl" required value="${k.tgl || ''}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Feses Padat (kg) *</label>
+                            <input type="number" step="0.5" id="ek-feses" required value="${k.fesesPadatKg || 0}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold text-amber-700">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Urin Terkumpul (Liter) *</label>
+                            <input type="number" step="0.5" id="ek-urin" required value="${k.urinLiter || 0}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold text-purple-700">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Petugas Kebersihan</label>
+                        <input type="text" id="ek-petugas" value="${k.petugas || ''}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Catatan Kondisi</label>
+                        <input type="text" id="ek-catatan" value="${k.catatan || ''}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+                    </div>
+
+                    <div class="pt-3 flex justify-end gap-2 border-t dark:border-slate-700">
+                        <button type="button" onclick="App.closeModal()" class="px-4 py-2 rounded-xl border border-slate-300 font-semibold text-slate-600 dark:text-slate-300">Batal</button>
+                        <button type="submit" class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-md transition active:scale-95">Simpan Perubahan</button>
+                    </div>
+                </form>
+            </div>
+        `);
+        App.openModal();
+    },
+
+    submitEditKohe(e, idx) {
+        e.preventDefault();
+        const fields = {
+            tgl: document.getElementById('ek-tgl').value,
+            fesesPadatKg: parseFloat(document.getElementById('ek-feses').value),
+            urinLiter: parseFloat(document.getElementById('ek-urin').value),
+            petugas: document.getElementById('ek-petugas').value.trim(),
+            catatan: document.getElementById('ek-catatan').value.trim()
+        };
+
+        Store.updateKoheHarian(idx, fields);
+        App.closeModal();
+        App.showToast('Catatan kohe harian berhasil diperbarui!', 'success');
+        App.renderContent();
+    },
+
+    deleteKohe(idx) {
+        if (confirm('Apakah Anda yakin ingin menghapus catatan kohe harian ini?')) {
+            Store.deleteKoheHarian(idx);
+            App.showToast('Catatan kohe harian berhasil dihapus!', 'success');
             App.renderContent();
         }
     }

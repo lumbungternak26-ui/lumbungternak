@@ -338,16 +338,16 @@ const DombaModule = {
                                             </div>
                                             <div class="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-800">
                                                 <span class="text-slate-500">Bobot Terkini:</span>
-                                                <span class="font-bold text-base text-emerald-600 dark:text-emerald-400">${latestWeight} kg</span>
+                                                <span class="font-bold text-base text-emerald-600 dark:text-emerald-400">${Number(latestWeight || 0).toFixed(2)} kg</span>
                                             </div>
                                             <div class="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-800 text-[11px]">
                                                 <span class="text-slate-400">Tgl & Bobot Masuk:</span>
-                                                <span class="font-semibold text-slate-700 dark:text-slate-300">${d.tglMasuk || '-'} (${d.bobotAwal !== undefined ? d.bobotAwal : '-'} kg)</span>
+                                                <span class="font-semibold text-slate-700 dark:text-slate-300">${d.tglMasuk || '-'} (${d.bobotAwal !== undefined ? Number(d.bobotAwal).toFixed(2) : '-'} kg)</span>
                                             </div>
                                             <div class="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-800">
                                                 <span class="text-slate-500">ADG (Laju Tumbuh):</span>
-                                                <span class="font-semibold ${d.adg >= 200 ? 'text-emerald-600' : d.adg >= 120 ? 'text-blue-600' : 'text-amber-600'}">
-                                                    ${d.adg ? '+' + d.adg + ' g/hari' : '-'}
+                                                <span class="font-semibold ${d.adg >= 200 ? 'text-emerald-600' : d.adg >= 120 ? 'text-blue-600' : d.adg > 0 ? 'text-amber-600' : 'text-slate-400'}">
+                                                    ${d.adg ? (d.adg > 0 ? '+' : '') + d.adg + ' g/hari' : '-'}
                                                 </span>
                                             </div>
                                             <div class="flex justify-between items-center py-1">
@@ -382,68 +382,66 @@ const DombaModule = {
                     </div>
                 ` : `
                     <!-- DOMBA LISTINGS: TABLE VIEW -->
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm overflow-hidden">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-xs text-left">
-                                <thead class="bg-slate-50 dark:bg-slate-900/60 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-700">
-                                    <tr>
-                                        <th class="py-3.5 px-4">Eartag & Warna</th>
-                                        <th class="py-3.5 px-4">Nama & Asal Ternak</th>
-                                        <th class="py-3.5 px-4">Ras / Bangsa</th>
-                                        <th class="py-3.5 px-4">Kelamin</th>
-                                        <th class="py-3.5 px-4">Fase</th>
-                                        <th class="py-3.5 px-4">Kandang/Sekat</th>
-                                        <th class="py-3.5 px-4 text-right">Bobot</th>
-                                        <th class="py-3.5 px-4 text-right">ADG</th>
-                                        <th class="py-3.5 px-4 text-center">Status</th>
-                                        <th class="py-3.5 px-4 text-center">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                                    ${list.map(d => {
-                                        const latestWeight = d.riwayatTimbang?.length > 0 ? d.riwayatTimbang[d.riwayatTimbang.length - 1].bobot : d.bobotAwal;
-                                        return `
-                                            <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-900/30 transition">
-                                                <td class="py-3 px-4">
-                                                    ${this.getWarnaTagBadge(d.warnaEartag, d.eartag)}
-                                                </td>
-                                                <td class="py-3 px-4">
-                                                    <div class="font-bold text-slate-800 dark:text-slate-200">${d.nama}</div>
-                                                    <div class="text-[11px] text-slate-500 flex items-center gap-1">
-                                                        <span class="text-slate-400">Asal:</span> <b>${d.asalTernak || 'Peternak Lokal Pleret'}</b>
-                                                    </div>
-                                                </td>
-                                                <td class="py-3 px-4 font-semibold">${d.ras}</td>
-                                                <td class="py-3 px-4">${d.kelamin}</td>
-                                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 font-medium">${d.kategori}</span></td>
-                                                <td class="py-3 px-4">${d.sekat}</td>
-                                                 <td class="py-3 px-4 text-right">
-                                                     <div class="font-bold text-emerald-600 dark:text-emerald-400">${latestWeight} kg</div>
-                                                     <div class="text-[10px] text-slate-400 font-medium whitespace-nowrap">Masuk: ${d.tglMasuk || '-'} (${d.bobotAwal !== undefined ? d.bobotAwal : '-'} kg)</div>
-                                                 </td>
-                                                <td class="py-3 px-4 text-right font-semibold">${d.adg ? '+' + d.adg + ' g' : '-'}</td>
-                                                <td class="py-3 px-4 text-center">
-                                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${d.status === 'Sehat' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-700'}">${d.status}</span>
-                                                </td>
-                                                <td class="py-3 px-4 text-center">
-                                                    <div class="flex items-center justify-center gap-1">
-                                                        <button onclick="ExportImport.printEartag('${d.eartag}')" title="Cetak Eartag" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500">
-                                                            <i data-lucide="qr-code" class="w-4 h-4"></i>
-                                                        </button>
-                                                        <button onclick="DombaModule.openModalEditDomba('${d.id}')" title="Ubah Data Ternak" class="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-950/50 rounded text-amber-600">
-                                                            <i data-lucide="edit-3" class="w-4 h-4"></i>
-                                                        </button>
-                                                        <button onclick="DombaModule.openModalDetail('${d.id}')" class="px-2.5 py-1 text-xs rounded-lg bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100">
-                                                            Detail
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        `;
-                                    }).join('')}
-                                </tbody>
-                            </table>
-                        </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+                            <thead class="bg-slate-50/80 dark:bg-slate-900/60 text-[11px] font-bold uppercase text-slate-500 tracking-wider border-b border-slate-200/80 dark:border-slate-700/80">
+                                <tr>
+                                    <th class="py-3 px-4">Eartag</th>
+                                    <th class="py-3 px-4">Nama / Asal</th>
+                                    <th class="py-3 px-4">Ras Domba</th>
+                                    <th class="py-3 px-4">Kelamin</th>
+                                    <th class="py-3 px-4">Kategori</th>
+                                    <th class="py-3 px-4">Sekat</th>
+                                    <th class="py-3 px-4 text-right">Bobot Terkini</th>
+                                    <th class="py-3 px-4 text-right">ADG</th>
+                                    <th class="py-3 px-4 text-center">Status</th>
+                                    <th class="py-3 px-4 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                ${list.map(d => {
+                                    const latestWeight = d.riwayatTimbang?.length > 0 ? d.riwayatTimbang[d.riwayatTimbang.length - 1].bobot : d.bobotAwal;
+                                    return `
+                                        <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-900/30 transition">
+                                            <td class="py-3 px-4">
+                                                ${this.getWarnaTagBadge(d.warnaEartag, d.eartag)}
+                                            </td>
+                                            <td class="py-3 px-4">
+                                                <div class="font-bold text-slate-800 dark:text-slate-200">${d.nama}</div>
+                                                <div class="text-[11px] text-slate-500 flex items-center gap-1">
+                                                    <span class="text-slate-400">Asal:</span> <b>${d.asalTernak || 'Peternak Lokal Pleret'}</b>
+                                                </div>
+                                            </td>
+                                            <td class="py-3 px-4 font-semibold">${d.ras}</td>
+                                            <td class="py-3 px-4">${d.kelamin}</td>
+                                            <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 font-medium">${d.kategori}</span></td>
+                                            <td class="py-3 px-4">${d.sekat}</td>
+                                            <td class="py-3 px-4 text-right">
+                                                <div class="font-bold text-emerald-600 dark:text-emerald-400">${Number(latestWeight || 0).toFixed(2)} kg</div>
+                                                <div class="text-[10px] text-slate-400 font-medium whitespace-nowrap">Masuk: ${d.tglMasuk || '-'} (${d.bobotAwal !== undefined ? Number(d.bobotAwal).toFixed(2) : '-'} kg)</div>
+                                            </td>
+                                            <td class="py-3 px-4 text-right font-semibold ${d.adg ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}">${d.adg ? (d.adg > 0 ? '+' : '') + d.adg + ' g' : '-'}</td>
+                                            <td class="py-3 px-4 text-center">
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${d.status === 'Sehat' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-700'}">${d.status}</span>
+                                            </td>
+                                            <td class="py-3 px-4 text-center">
+                                                <div class="flex items-center justify-center gap-1">
+                                                    <button onclick="ExportImport.printEartag('${d.eartag}')" title="Cetak Eartag" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-500">
+                                                        <i data-lucide="qr-code" class="w-4 h-4"></i>
+                                                    </button>
+                                                    <button onclick="DombaModule.openModalEditDomba('${d.id}')" title="Ubah Data Ternak" class="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-950/50 rounded text-amber-600">
+                                                        <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                                    </button>
+                                                    <button onclick="DombaModule.openModalDetail('${d.id}')" class="px-2.5 py-1 text-xs rounded-lg bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100">
+                                                        Detail
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
                     </div>
                 `}
             </div>
@@ -567,14 +565,18 @@ const DombaModule = {
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
                         <div>
                             <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal Masuk *</label>
                             <input type="date" id="add-tgl-masuk" required value="${new Date().toISOString().split('T')[0]}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-semibold text-emerald-600">
                         </div>
                         <div>
                             <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Bobot Masuk (kg) *</label>
-                            <input type="number" step="0.1" id="add-bobot" required placeholder="Contoh: 25.5" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
+                            <input type="number" step="0.01" id="add-bobot" required placeholder="Contoh: 25.50" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Laju ADG (g/hari)</label>
+                            <input type="number" id="add-adg" placeholder="Contoh: 180" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold text-blue-600">
                         </div>
                         <div>
                             <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal Lahir</label>
@@ -633,7 +635,9 @@ const DombaModule = {
 
         const tglMasuk = document.getElementById("add-tgl-masuk")?.value || new Date().toISOString().split("T")[0];
         const tglLahir = document.getElementById("add-tgl-lahir").value;
-        const bobotAwal = parseFloat(document.getElementById("add-bobot").value);
+        const bobotAwal = parseFloat(parseFloat(document.getElementById("add-bobot").value).toFixed(2));
+        const adgVal = document.getElementById("add-adg") ? document.getElementById("add-adg").value.trim() : "";
+        const adg = adgVal !== "" ? parseInt(adgVal, 10) || 0 : 0;
         const hargaBeli = parseFloat(document.getElementById("add-harga").value) || 0;
         const induk = document.getElementById("add-induk").value.trim() || "-";
         const pejantan = document.getElementById("add-pejantan").value.trim() || "-";
@@ -658,7 +662,7 @@ const DombaModule = {
             induk,
             pejantan,
             foto,
-            adg: 0,
+            adg,
             riwayatTimbang: [{ tgl: tglMasuk, bobot: bobotAwal, catatan: "Bobot awal masuk kandang" }],
             rekamMedis: [],
             riwayatKawin: []
@@ -710,7 +714,7 @@ const DombaModule = {
                     </div>
                     <div>
                         <span class="text-slate-400 block text-[11px]">Bobot Terkini</span>
-                        <b class="text-emerald-600 dark:text-emerald-400 text-sm">${latestWeight} kg</b>
+                        <b class="text-emerald-600 dark:text-emerald-400 text-sm">${Number(latestWeight || 0).toFixed(2)} kg</b>
                     </div>
                     <div>
                         <span class="text-slate-400 block text-[11px]">Tanggal Masuk Kandang</span>
@@ -718,7 +722,7 @@ const DombaModule = {
                     </div>
                     <div>
                         <span class="text-slate-400 block text-[11px]">Bobot Awal Masuk</span>
-                        <b class="text-slate-800 dark:text-slate-200 font-bold">${d.bobotAwal !== undefined ? d.bobotAwal + ' kg' : '-'}</b>
+                        <b class="text-slate-800 dark:text-slate-200 font-bold">${d.bobotAwal !== undefined ? Number(d.bobotAwal).toFixed(2) + ' kg' : '-'}</b>
                     </div>
                     <div>
                         <span class="text-slate-400 block text-[11px]">Laju Tumbuh (ADG)</span>
@@ -754,13 +758,31 @@ const DombaModule = {
                     </div>
                 </div>
 
+                <!-- Shortcut Menu Baru Terintegrasi (HPP, SKKH, Berita Acara) -->
+                <div class="p-3 bg-gradient-to-r from-slate-50 via-emerald-50/50 to-indigo-50/50 dark:from-slate-800 dark:to-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2">
+                    <span class="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i> Integrasi Layanan Khusus:
+                    </span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" onclick="App.closeModal(); App.navigate('paspor_skkh'); setTimeout(() => PasporSkkhModule.pilihEartag('${d.eartag}'), 100);" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm transition-all">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Paspor & SKKH
+                        </button>
+                        <button type="button" onclick="HppCostingModule.openModalDetail('${d.eartag}');" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm transition-all">
+                            <i data-lucide="calculator" class="w-3.5 h-3.5"></i> Analisis HPP
+                        </button>
+                        <button type="button" onclick="App.closeModal(); App.navigate('berita_acara_ternak'); setTimeout(() => BeritaAcaraModule.openModalTambah('${d.eartag}'), 100);" class="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm transition-all">
+                            <i data-lucide="file-check-2" class="w-3.5 h-3.5"></i> Berita Acara
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Tab Riwayat Timbangan -->
                 <div class="space-y-2">
                     <div class="flex items-center justify-between">
                         <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                             <i data-lucide="scale" class="w-4 h-4 text-emerald-600"></i> Riwayat Penimbangan Bobot
                         </h4>
-                        <button onclick="DombaModule.openModalTambahTimbang('${d.id}')" class="text-xs text-emerald-600 font-semibold hover:underline">
+                        <button onclick="DombaModule.openModalTimbang('${d.id}')" class="text-xs text-emerald-600 font-semibold hover:underline">
                             + Catat Timbangan Baru
                         </button>
                     </div>
@@ -772,14 +794,23 @@ const DombaModule = {
                                     <th class="py-2 px-3">Tanggal</th>
                                     <th class="py-2 px-3 text-right">Bobot (kg)</th>
                                     <th class="py-2 px-3">Catatan Petugas</th>
+                                    <th class="py-2 px-3 text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                                ${(d.riwayatTimbang || []).map(r => `
+                                ${(d.riwayatTimbang || []).map((r, idx) => `
                                     <tr>
                                         <td class="py-2 px-3 text-slate-600 dark:text-slate-300">${r.tgl}</td>
-                                        <td class="py-2 px-3 text-right font-bold text-slate-900 dark:text-white">${r.bobot} kg</td>
+                                        <td class="py-2 px-3 text-right font-bold text-slate-900 dark:text-white font-mono">${Number(r.bobot || 0).toFixed(2)} kg</td>
                                         <td class="py-2 px-3 text-slate-500">${r.catatan || '-'}</td>
+                                        <td class="py-2 px-3 text-center whitespace-nowrap">
+                                            <button type="button" onclick="DombaModule.openModalEditTimbang('${d.id}', ${idx})" class="p-1 rounded text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40" title="Edit Bobot">
+                                                <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                            <button type="button" onclick="DombaModule.hapusRiwayatTimbang('${d.id}', ${idx})" class="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40" title="Hapus Log">
+                                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -798,22 +829,32 @@ const DombaModule = {
                         </button>
                     </div>
 
-                    <div class="space-y-2 text-xs">
-                        ${(d.rekamMedis || []).length === 0 ? `
-                            <p class="text-xs text-slate-400 italic py-2">Belum ada riwayat keluhan atau sakit (Kondisi Sehat).</p>
-                        ` : (d.rekamMedis || []).map(m => `
-                            <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30">
-                                <div class="flex items-center justify-between mb-1">
-                                    <span class="font-bold text-slate-800 dark:text-slate-200">${m.diagnosa}</span>
-                                    <span class="text-slate-400 text-[11px]">${m.tgl}</span>
-                                </div>
-                                <p class="text-slate-600 dark:text-slate-400">${m.tindakan}</p>
-                                <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
-                                    <span>Obat: <b>${m.obat || '-'}</b></span>
-                                    <span>Petugas: <b>${m.petugas}</b></span>
-                                </div>
-                            </div>
-                        `).join('')}
+                    <div class="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden text-xs">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 dark:bg-slate-900 text-slate-500 font-semibold border-b dark:border-slate-700">
+                                <tr>
+                                    <th class="py-2 px-3">Tanggal</th>
+                                    <th class="py-2 px-3">Diagnosa / Gejala</th>
+                                    <th class="py-2 px-3">Tindakan / Obat</th>
+                                    <th class="py-2 px-3">Petugas</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                ${(d.rekamMedis || []).map(m => `
+                                    <tr>
+                                        <td class="py-2 px-3 text-slate-600 dark:text-slate-300">${m.tgl}</td>
+                                        <td class="py-2 px-3 font-semibold text-rose-600 dark:text-rose-400">${m.diagnosa}</td>
+                                        <td class="py-2 px-3 text-slate-700 dark:text-slate-300">${m.tindakan}</td>
+                                        <td class="py-2 px-3 text-slate-500">${m.petugas}</td>
+                                    </tr>
+                                `).join('')}
+                                ${(!d.rekamMedis || d.rekamMedis.length === 0) ? `
+                                    <tr>
+                                        <td colspan="4" class="py-4 text-center text-slate-400 italic">Belum ada riwayat penyakit (Ternak Sehat)</td>
+                                    </tr>
+                                ` : ''}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -836,8 +877,8 @@ const DombaModule = {
         App.openModal();
     },
 
-    // Modal Tambah Timbangan Individu
-    openModalTambahTimbang(dombaId) {
+    // Modal Catat Timbangan
+    openModalTimbang(dombaId) {
         const d = Store.getDomba().find(item => item.id === dombaId);
         if (!d) return;
 
@@ -845,7 +886,7 @@ const DombaModule = {
             <div class="p-6 space-y-4">
                 <div class="flex items-center justify-between border-b pb-3 dark:border-slate-700">
                     <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <i data-lucide="scale" class="w-5 h-5 text-blue-600"></i> Catat Timbangan: ${d.eartag} (${d.nama})
+                        <i data-lucide="scale" class="w-5 h-5 text-emerald-600"></i> Catat Timbangan: ${d.eartag} (${d.nama})
                     </h3>
                     <button onclick="App.closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
@@ -857,7 +898,7 @@ const DombaModule = {
                     </div>
                     <div>
                         <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Bobot Timbangan Terkini (kg) *</label>
-                        <input type="number" step="0.1" id="tb-bobot" required placeholder="Contoh: 48.5" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-base font-bold text-emerald-600">
+                        <input type="number" step="0.01" id="tb-bobot" required placeholder="Contoh: 48.50" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-base font-bold text-emerald-600">
                     </div>
                     <div>
                         <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Catatan Pertumbuhan</label>
@@ -877,13 +918,91 @@ const DombaModule = {
     submitTimbang(e, dombaId) {
         e.preventDefault();
         const tgl = document.getElementById("tb-tgl").value;
-        const bobot = parseFloat(document.getElementById("tb-bobot").value);
+        const bobot = parseFloat(parseFloat(document.getElementById("tb-bobot").value).toFixed(2));
         const catatan = document.getElementById("tb-catatan").value.trim();
 
         Store.addRiwayatTimbang(dombaId, tgl, bobot, catatan);
         App.closeModal();
         App.showToast("Timbangan berhasil disimpan! ADG telah diperbarui.", "success");
         App.renderContent();
+    },
+
+    openModalEditTimbang(dombaId, index) {
+        const domba = Store.getDomba().find(d => d.id === dombaId || d.eartag === dombaId);
+        if (!domba || !domba.riwayatTimbang || !domba.riwayatTimbang[index]) {
+            App.showToast("Data timbangan tidak ditemukan!", "error");
+            return;
+        }
+        const record = domba.riwayatTimbang[index];
+        const bobotVal = parseFloat(record.bobot || 0).toFixed(2);
+
+        App.setModalContent(`
+            <div class="p-6 space-y-4 max-w-md mx-auto">
+                <div class="flex items-center justify-between border-b pb-3 dark:border-slate-700">
+                    <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i data-lucide="scale" class="w-5 h-5 text-indigo-600"></i> Edit Hasil Penimbangan
+                    </h3>
+                    <button onclick="App.closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+
+                <div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs space-y-1">
+                    <div class="flex justify-between"><span class="text-slate-500">Nomor Eartag:</span><b class="font-mono text-slate-800 dark:text-slate-200">${domba.eartag}</b></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Nama / Ras:</span><span class="font-bold">${domba.nama || '-'} (${domba.ras || '-'})</span></div>
+                </div>
+
+                <form onsubmit="DombaModule.submitEditTimbang(event, '${domba.id}', ${index})" class="space-y-3.5 text-xs">
+                    <div>
+                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tanggal Penimbangan *</label>
+                        <input type="date" id="edt-tgl" required value="${record.tgl || ''}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-semibold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Bobot Timbang (kg) *</label>
+                        <input type="number" step="0.01" min="1" max="250" id="edt-bobot" required value="${bobotVal}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-mono font-bold text-base text-emerald-600 dark:text-emerald-400">
+                        <span class="text-[10px] text-slate-400 mt-0.5 block">Format 2 digit di belakang koma (misal: 32.75 kg)</span>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Catatan Perkembangan</label>
+                        <input type="text" id="edt-catatan" value="${record.catatan || ''}" placeholder="Misal: Nafsu makan sangat baik" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+                    </div>
+
+                    <div class="pt-3 border-t dark:border-slate-700 flex justify-end gap-2">
+                        <button type="button" onclick="App.closeModal()" class="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300">Batal</button>
+                        <button type="submit" class="px-5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-md">Simpan Perubahan</button>
+                    </div>
+                </form>
+            </div>
+        `);
+        App.openModal();
+    },
+
+    submitEditTimbang(e, dombaId, index) {
+        e.preventDefault();
+        const newTgl = document.getElementById("edt-tgl").value;
+        const newBobot = parseFloat(document.getElementById("edt-bobot").value);
+        const newCatatan = document.getElementById("edt-catatan").value.trim();
+
+        if (isNaN(newBobot) || newBobot <= 0) {
+            App.showToast("Bobot harus berupa angka positif!", "error");
+            return;
+        }
+
+        const ok = Store.updateRiwayatTimbang(dombaId, index, newTgl, newBobot, newCatatan);
+        if (ok) {
+            App.closeModal();
+            App.showToast(`Bobot berhasil diperbarui menjadi ${newBobot.toFixed(2)} kg!`, "success");
+            DombaModule.openDetail(dombaId);
+        } else {
+            App.showToast("Gagal memperbarui bobot.", "error");
+        }
+    },
+
+    hapusRiwayatTimbang(dombaId, index) {
+        if (!confirm("Apakah Anda yakin ingin menghapus data timbangan ini?")) return;
+        const ok = Store.deleteRiwayatTimbang(dombaId, index);
+        if (ok) {
+            App.showToast("Catatan timbangan berhasil dihapus.", "success");
+            DombaModule.openDetail(dombaId);
+        }
     },
 
     // Modal Tambah Tindakan Medis
@@ -1152,21 +1271,25 @@ const DombaModule = {
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
                         <div>
                             <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal Masuk *</label>
                             <input type="date" id="edit-tgl-masuk" required value="${d.tglMasuk || new Date().toISOString().split('T')[0]}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-semibold text-emerald-600">
                         </div>
                         <div>
                             <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Bobot Masuk (kg) *</label>
-                            <input type="number" step="0.1" id="edit-bobot" required value="${d.bobotAwal}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
+                            <input type="number" step="0.01" id="edit-bobot" required value="${d.bobotAwal !== undefined ? Number(d.bobotAwal).toFixed(2) : ''}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Laju ADG (g/hari)</label>
+                            <input type="number" id="edit-adg" value="${d.adg !== undefined && d.adg !== null ? d.adg : 0}" placeholder="Contoh: 180" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold text-blue-600">
                         </div>
                         <div>
                             <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal Lahir</label>
                             <input type="date" id="edit-tgl-lahir" value="${d.tglLahir || '2025-01-01'}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900">
                         </div>
                         <div>
-                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Harga Beli / Aset (Rp)</label>
+                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Harga Beli (Rp)</label>
                             <input type="number" id="edit-harga" value="${d.hargaBeli || 0}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900">
                         </div>
                     </div>
@@ -1220,7 +1343,7 @@ const DombaModule = {
 
         const tglMasuk = document.getElementById("edit-tgl-masuk")?.value || (existing ? existing.tglMasuk : "") || new Date().toISOString().split("T")[0];
         const tglLahir = document.getElementById("edit-tgl-lahir").value;
-        const bobotAwal = parseFloat(document.getElementById("edit-bobot").value);
+        const bobotAwal = parseFloat(parseFloat(document.getElementById("edit-bobot").value).toFixed(2));
         const hargaBeli = parseFloat(document.getElementById("edit-harga").value) || 0;
         const induk = document.getElementById("edit-induk").value.trim() || "-";
         const pejantan = document.getElementById("edit-pejantan").value.trim() || "-";
@@ -1240,13 +1363,19 @@ const DombaModule = {
         }
         riwayatTimbang.sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
 
+        const editAdgEl = document.getElementById("edit-adg");
+        const editAdgVal = editAdgEl ? editAdgEl.value.trim() : "";
         let adg = 0;
-        if (riwayatTimbang.length >= 2) {
+        if (editAdgVal !== "") {
+            adg = parseInt(editAdgVal, 10) || 0;
+        } else if (riwayatTimbang.length >= 2) {
             const last = riwayatTimbang[riwayatTimbang.length - 1];
             const prev = riwayatTimbang[riwayatTimbang.length - 2];
             const diffDays = Math.max(1, Math.round((new Date(last.tgl) - new Date(prev.tgl)) / (1000 * 60 * 60 * 24)));
             const diffWeightKg = last.bobot - prev.bobot;
             adg = Math.round((diffWeightKg * 1000) / diffDays);
+        } else if (existing?.adg !== undefined) {
+            adg = existing.adg;
         }
 
         Store.updateDomba(dombaId, {

@@ -417,9 +417,12 @@ const App = {
             
             const allRoutes = [
                 "dashboard", "scan_penimbang_cepat", "kanban", "siklus_batch", "siklus_breeding",
+                "manajemen_sapih", "paspor_skkh",
                 "master_kandang", "data_ternak", "history_timbang", "cetak_stiker_qr", "import_csv",
                 "input_pakan_harian", "scan_vaksin_medis", "stok_pakan_hpp", "rekam_medis",
-                "pertanian", "limbah_organik", "limbah", "buku_kas_bumdes", "skema_kemitraan",
+                "pertanian", "limbah_organik", "limbah", "buku_kas_bumdes",
+                "hpp_unit_costing", "berita_acara_ternak",
+                "skema_kemitraan",
                 "laporan_rapat_evaluasi", "executive_dss_pades", "laporan", "penjualan_ternak",
                 "gaji_operasional", "master_pengaturan", "bumdes_backup_purge",
                 "firebase_sync", "master_preset_vaksin", "manajemen_user"
@@ -500,6 +503,12 @@ const App = {
                 case "siklus_breeding":
                     html = BreedingModule.render();
                     break;
+                case "manajemen_sapih":
+                    html = ManajemenSapihModule.render();
+                    break;
+                case "paspor_skkh":
+                    html = PasporSkkhModule.render();
+                    break;
                 case "master_kandang":
                     html = PenggemukanModule.render("master_kandang");
                     break;
@@ -540,6 +549,12 @@ const App = {
                 // 4. KEUANGAN BUMDES & KEMITRAAN
                 case "buku_kas_bumdes":
                     html = KeuanganBumdesModule.render("buku_kas_bumdes");
+                    break;
+                case "hpp_unit_costing":
+                    html = HppCostingModule.render();
+                    break;
+                case "berita_acara_ternak":
+                    html = BeritaAcaraModule.render();
                     break;
                 case "skema_kemitraan":
                     html = KeuanganBumdesModule.render("skema_kemitraan");
@@ -619,6 +634,9 @@ const App = {
         if (this.currentRoute === "cetak_stiker_qr" && window.PenggemukanModule) {
             setTimeout(() => PenggemukanModule.renderQRCodes(), 80);
         }
+        if (this.currentRoute === "paspor_skkh" && window.PasporSkkhModule && PasporSkkhModule.selectedEartag) {
+            setTimeout(() => PasporSkkhModule.generateQrCode(PasporSkkhModule.selectedEartag), 80);
+        }
 
         // Perbarui badge notifikasi stok menipis
         this.updateStockAlertBadge();
@@ -694,7 +712,7 @@ const App = {
                             <select id="qt-domba" required class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
                                 ${dombaList.map(d => {
                                     const latest = d.riwayatTimbang?.length > 0 ? d.riwayatTimbang[d.riwayatTimbang.length - 1].bobot : d.bobotAwal;
-                                    return `<option value="${d.id}">${d.eartag} - ${d.nama} (Terakhir: ${latest} kg)</option>`;
+                                    return `<option value="${d.id}">${d.eartag} - ${d.nama} (Terakhir: ${Number(latest || 0).toFixed(2)} kg)</option>`;
                                 }).join('')}
                             </select>
                         </div>
@@ -704,7 +722,7 @@ const App = {
                         </div>
                         <div>
                             <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Hasil Timbangan Terkini (kg) *</label>
-                            <input type="number" step="0.1" id="qt-bobot" required placeholder="Contoh: 45.2" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-lg font-black text-emerald-600">
+                            <input type="number" step="0.01" id="qt-bobot" required placeholder="Contoh: 45.25" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-lg font-black text-emerald-600">
                         </div>
                         <div>
                             <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Catatan</label>
@@ -823,7 +841,7 @@ const App = {
         e.preventDefault();
         const dombaId = document.getElementById("qt-domba").value;
         const tgl = document.getElementById("qt-tgl").value;
-        const bobot = parseFloat(document.getElementById("qt-bobot").value);
+        const bobot = parseFloat(parseFloat(document.getElementById("qt-bobot").value).toFixed(2));
         const catatan = document.getElementById("qt-catatan").value.trim();
 
         Store.addRiwayatTimbang(dombaId, tgl, bobot, catatan);

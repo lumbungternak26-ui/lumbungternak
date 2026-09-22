@@ -234,8 +234,8 @@ const ExportImport = {
                     d.kelamin,
                     d.kandang,
                     d.sekat,
-                    d.bobotAwal,
-                    latestWeight,
+                    d.bobotAwal !== undefined ? Number(d.bobotAwal).toFixed(2) : "-",
+                    latestWeight !== undefined ? Number(latestWeight).toFixed(2) : "-",
                     d.adg || 0,
                     d.status,
                     d.tglMasuk || "-",
@@ -350,7 +350,7 @@ const ExportImport = {
                         <div class="row"><span>Asal Ternak:</span><b>${domba.asalTernak || 'Peternak Lokal Pleret'}</b></div>
                         <div class="row"><span>Kandang/Sekat:</span><b>${domba.kandang} / ${domba.sekat}</b></div>
                         <div class="row"><span>Kelamin / Fase:</span><b>${domba.kelamin} / ${domba.kategori}</b></div>
-                        <div class="row"><span>Bobot Terkini:</span><b>${latestWeight} kg</b></div>
+                        <div class="row"><span>Bobot Terkini:</span><b>${Number(latestWeight || 0).toFixed(2)} kg</b></div>
                         <div class="row"><span>Tgl Lahir:</span><b>${domba.tglLahir}</b></div>
                         <div class="row"><span>Status:</span><b style="color: #059669;">${domba.status}</b></div>
                     </div>
