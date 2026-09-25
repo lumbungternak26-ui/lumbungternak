@@ -42,12 +42,8 @@ const App = {
             Store.pullFromFirebase().then(res => {
                 if (res && res.success) {
                     console.log("[Cloud] Auto-pull database dari Firebase berhasil pada perangkat ini.");
-                    if (window.App) {
-                        if (window.App.currentView === "admin" && typeof window.App.renderContent === "function") {
-                            window.App.renderContent();
-                        } else if (window.App.currentView === "public" && window.PortalPublikModule) {
-                            window.PortalPublikModule.render();
-                        }
+                    if (window.App && typeof window.App.renderContent === "function") {
+                        window.App.renderContent();
                     }
                 }
             }).catch(err => console.warn("[Cloud] Auto-pull notice:", err))
@@ -96,10 +92,8 @@ const App = {
         window.addEventListener("online", () => {
             if (Store.pullFromFirebase) {
                 Store.pullFromFirebase().then(() => {
-                    if (this.currentView === "admin" && typeof this.renderContent === "function") {
+                    if (typeof this.renderContent === "function") {
                         this.renderContent();
-                    } else if (this.currentView === "public" && window.PortalPublikModule) {
-                        window.PortalPublikModule.render();
                     }
                 });
             }
@@ -235,9 +229,7 @@ const App = {
         try {
             const res = await Store.pullFromFirebase();
             if (res && res.success) {
-                if (this.currentView === "public" && window.PortalPublikModule) {
-                    window.PortalPublikModule.render();
-                } else if (this.currentView === "admin" && typeof this.renderContent === "function") {
+                if (typeof this.renderContent === "function") {
                     this.renderContent();
                 }
                 this.updateCloudHeaderBadge();
@@ -737,6 +729,7 @@ const App = {
                 </div>
             `);
         } else if (modalType === "modal-kohe") {
+            const curUser = Store.getCurrentUser ? Store.getCurrentUser() : { nama: "Petugas" };
             this.setModalContent(`
                 <div class="p-6 space-y-4">
                     <div class="flex items-center justify-between border-b pb-3 dark:border-slate-700">
@@ -747,9 +740,15 @@ const App = {
                     </div>
 
                     <form onsubmit="App.submitQuickKohe(event)" class="space-y-3 text-xs">
-                        <div>
-                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal Pembersihan Kandang *</label>
-                            <input type="date" id="qk-tgl" required value="${new Date().toISOString().split('T')[0]}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal Pembersihan Kandang *</label>
+                                <input type="date" id="qk-tgl" required value="${new Date().toISOString().split('T')[0]}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Petugas (User Login) *</label>
+                                <input type="text" id="qk-petugas" required value="${curUser.nama || 'Petugas'}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 font-bold text-slate-800 dark:text-slate-200">
+                            </div>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
@@ -856,7 +855,8 @@ const App = {
         const fesesPadatKg = parseFloat(document.getElementById("qk-feses").value);
         const urinLiter = parseFloat(document.getElementById("qk-urin").value);
         const catatan = document.getElementById("qk-catatan").value.trim();
-        const petugas = Store.getCurrentUser().nama || "Wahyu Pratama";
+        const user = Store.getCurrentUser ? Store.getCurrentUser() : null;
+        const petugas = (document.getElementById("qk-petugas") ? document.getElementById("qk-petugas").value.trim() : "") || (user && user.nama) || "Petugas";
 
         Store.addKoheHarian({ tgl, fesesPadatKg, urinLiter, petugas, catatan });
         this.closeModal();

@@ -610,11 +610,11 @@ const Store = {
             { id: "lhn-2", nama: "Kebun Legum (Indigofera & Gamal)", lokasi: "Blok Timur Kedaton", luasM2: 1800, komoditas: "Indigofera", tglTanam: "2024-11-20", tglPanenTerakhir: "2026-08-30", tglEstimasiPanen: "2026-09-28", estimasiHasilKg: 1800, status: "Siap Pangkas", pupukDigunakan: "POC Urin Domba", keterangan: "Sumber protein nabati tinggi." }
         ];
         const stokPakan = [
-            { id: "stk-1", nama: "Konsentrat Penggemukan (PK 16%)", kategori: "Konsentrat", stokKg: 1250, satuan: "kg", batasMinimum: 300, biayaPerKg: 4200 },
-            { id: "stk-2", nama: "Silase Tebon Jagung Fermentasi", kategori: "Silase", stokKg: 3400, satuan: "kg", batasMinimum: 800, biayaPerKg: 1200 },
-            { id: "stk-3", nama: "Silase Jerami Padi EM4", kategori: "Silase", stokKg: 1800, satuan: "kg", batasMinimum: 500, biayaPerKg: 800 },
-            { id: "stk-4", nama: "Hijauan Segar Odot/Pakchong", kategori: "Hijauan", stokKg: 650, satuan: "kg", batasMinimum: 200, biayaPerKg: 400 },
-            { id: "stk-5", nama: "Mineral Blok & Garam Beryodium", kategori: "Suplemen", stokKg: 85, satuan: "kg", batasMinimum: 20, biayaPerKg: 15000 }
+            { id: "stk-1", nama: "Konsentrat Penggemukan (PK 16%)", kategori: "Konsentrat", stokKg: 1250, satuan: "kg", batasMinimum: 300, biayaPerKg: 4200, tglMasuk: "2026-09-01", tglUpdate: "2026-09-20" },
+            { id: "stk-2", nama: "Silase Tebon Jagung Fermentasi", kategori: "Silase", stokKg: 3400, satuan: "kg", batasMinimum: 800, biayaPerKg: 1200, tglMasuk: "2026-09-01", tglUpdate: "2026-09-18" },
+            { id: "stk-3", nama: "Silase Jerami Padi EM4", kategori: "Silase", stokKg: 1800, satuan: "kg", batasMinimum: 500, biayaPerKg: 800, tglMasuk: "2026-09-01", tglUpdate: "2026-09-15" },
+            { id: "stk-4", nama: "Hijauan Segar Odot/Pakchong", kategori: "Hijauan", stokKg: 650, satuan: "kg", batasMinimum: 200, biayaPerKg: 400, tglMasuk: "2026-09-01", tglUpdate: "2026-09-25" },
+            { id: "stk-5", nama: "Mineral Blok & Garam Beryodium", kategori: "Suplemen", stokKg: 85, satuan: "kg", batasMinimum: 20, biayaPerKg: 15000, tglMasuk: "2026-09-01", tglUpdate: "2026-09-10" }
         ];
         const batchLimbah = [
             { id: "B-POP-01", nama: "Kompos Kohe Domba Halus Batch 08", tipe: "Pupuk Organik Padat (POP)", kapasitas: 2500, satuan: "kg", tglMulai: "2026-08-15", tglEstimasiSelesai: "2026-09-18", suhuTerkini: 38, status: "Pengeringan & Ayak", dekomposer: "Trichoderma + EM4", campuran: "Feses 70%, Sekam 15%, Dolomit 5%", jadwalBalik: [{ hari: "Hari ke-7", tgl: "2026-08-22", selesai: true, suhu: 58 }], targetKemasan: "125 karung @20kg" },
@@ -650,11 +650,39 @@ const Store = {
             "Pasar Hewan Prambanan",
             "Balai Pembibitan Ternak DIY"
         ];
-        return list.map((d, idx) => ({
-            ...d,
-            warnaEartag: d.warnaEartag || defaultWarna[idx % defaultWarna.length],
-            asalTernak: d.asalTernak || defaultAsal[idx % defaultAsal.length]
-        }));
+        return list.map((d, idx) => {
+            let adgVal = d.adg;
+            if ((!adgVal || adgVal <= 0) && Array.isArray(d.riwayatTimbang) && d.riwayatTimbang.length >= 2) {
+                const sorted = [...d.riwayatTimbang].sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
+                const last = sorted[sorted.length - 1];
+                const prev = sorted[sorted.length - 2];
+                const diffDays = Math.max(1, Math.round((new Date(last.tgl) - new Date(prev.tgl)) / (1000 * 60 * 60 * 24)));
+                const diffWeightKg = (parseFloat(last.bobot) || 0) - (parseFloat(prev.bobot) || 0);
+                if (diffWeightKg > 0) {
+                    adgVal = Math.round((diffWeightKg * 1000) / diffDays);
+                }
+            } else if ((!adgVal || adgVal <= 0) && Array.isArray(d.riwayatTimbang) && d.riwayatTimbang.length === 1 && d.bobotAwal && d.tglMasuk) {
+                const last = d.riwayatTimbang[0];
+                const diffDays = Math.max(1, Math.round((new Date(last.tgl) - new Date(d.tglMasuk)) / (1000 * 60 * 60 * 24)));
+                const diffWeightKg = (parseFloat(last.bobot) || 0) - (parseFloat(d.bobotAwal) || 0);
+                if (diffWeightKg > 0) {
+                    adgVal = Math.round((diffWeightKg * 1000) / diffDays);
+                }
+            }
+
+            const latestWeight = (Array.isArray(d.riwayatTimbang) && d.riwayatTimbang.length > 0)
+                ? (d.riwayatTimbang[d.riwayatTimbang.length - 1].bobot || d.bobotAwal || 0)
+                : (d.bobotTerkini || d.bobotAwal || 0);
+
+            return {
+                ...d,
+                adg: adgVal || 0,
+                bobotTerkini: Number(latestWeight) || 0,
+                berat: Number(latestWeight) || 0,
+                warnaEartag: d.warnaEartag || defaultWarna[idx % defaultWarna.length],
+                asalTernak: d.asalTernak || defaultAsal[idx % defaultAsal.length]
+            };
+        });
     },
     saveDomba(l) { 
         localStorage.setItem(STORAGE_KEYS.DOMBA, JSON.stringify(l)); 
@@ -697,6 +725,63 @@ const Store = {
         }
     },
     deleteDomba(id) { const l = this.getDomba().filter(d => d.id !== id); this.saveDomba(l); },
+    upsertDomba(d) {
+        const list = this.getDomba();
+        const eartagKey = (d.eartag || "").trim().toLowerCase();
+        const existing = list.find(item => item.eartag && item.eartag.trim().toLowerCase() === eartagKey);
+        const now = new Date().toISOString().split("T")[0];
+        const newWeight = parseFloat(Number(d.bobotAwal || 0).toFixed(2));
+
+        if (existing) {
+            // TABRAKAN EARTAG: AMBIL DATA TERBARU DARI SPREADSHEET
+            const updateFields = {
+                warnaEartag: d.warnaEartag || existing.warnaEartag || "Kuning",
+                nama: d.nama || existing.nama,
+                ras: d.ras || existing.ras,
+                asalTernak: d.asalTernak || existing.asalTernak,
+                kelamin: d.kelamin || existing.kelamin,
+                kategori: d.kategori || existing.kategori,
+                kandang: d.kandang || existing.kandang,
+                sekat: d.sekat || existing.sekat,
+                status: d.status || existing.status,
+                tglMasuk: d.tglMasuk || existing.tglMasuk || now
+            };
+            if (newWeight > 0) {
+                updateFields.bobotAwal = newWeight;
+            }
+            if (d.hargaBeli !== undefined && !isNaN(d.hargaBeli) && d.hargaBeli > 0) {
+                updateFields.hargaBeli = d.hargaBeli;
+            }
+            this.updateDomba(existing.id, updateFields);
+            return { action: "update", domba: { ...existing, ...updateFields } };
+        } else {
+            // DATA BARU
+            const newD = {
+                id: d.id || ("dmb-imp-" + Date.now() + "-" + Math.floor(Math.random() * 10000)),
+                eartag: d.eartag,
+                warnaEartag: d.warnaEartag || "Kuning",
+                nama: d.nama || `Domba ${d.eartag}`,
+                ras: d.ras || "Lokal Cross",
+                asalTernak: d.asalTernak || "Peternak Lokal Pleret",
+                kelamin: d.kelamin || "Jantan",
+                kategori: d.kategori || "Fattening",
+                kandang: d.kandang || "Kandang A",
+                sekat: d.sekat || "Sekat 01",
+                bobotAwal: newWeight || 25.0,
+                hargaBeli: parseFloat(d.hargaBeli) || 2500000,
+                status: d.status || "Sehat",
+                tglLahir: d.tglLahir || "2025-01-01",
+                tglMasuk: d.tglMasuk || now,
+                adg: 0,
+                foto: "https://images.unsplash.com/photo-1484557052118-f32bd25b45b5?auto=format&fit=crop&w=600&q=80",
+                riwayatTimbang: [{ tgl: d.tglMasuk || now, bobot: newWeight || 25.0, catatan: "Import Berkas Spreadsheet" }],
+                rekamMedis: [],
+                riwayatKawin: []
+            };
+            this.addDomba(newD);
+            return { action: "insert", domba: newD };
+        }
+    },
 
     // Batches Penggemukan
     getBatchesPenggemukan() { return this.safeGet(STORAGE_KEYS.BATCHES_PENGGEMUKAN, []); },
@@ -945,6 +1030,10 @@ const Store = {
     getLogPakanHarian() { return this.safeGet(STORAGE_KEYS.LOG_PAKAN_HARIAN, []); },
     saveLogPakanHarian(l) { localStorage.setItem(STORAGE_KEYS.LOG_PAKAN_HARIAN, JSON.stringify(l)); this.triggerAutoSync(); },
     addLogPakanHarian(p) {
+        if (!p.petugas) {
+            const u = this.getCurrentUser();
+            p.petugas = (u && u.nama) ? u.nama : "Petugas";
+        }
         const l = this.getLogPakanHarian();
         l.unshift(p);
         this.saveLogPakanHarian(l);
@@ -956,25 +1045,29 @@ const Store = {
     deductStokPakanFromLog(konsentratKg = 0, silaseKg = 0, hijauanKg = 0) {
         const stok = this.getStokPakan();
         let changed = false;
+        const today = new Date().toISOString().split('T')[0];
 
-        // 1. Kurangi Konsentrat
-        const sKonsentrat = stok.find(s => s.kategori === "Konsentrat" || s.nama.toLowerCase().includes("konsentrat"));
-        if (sKonsentrat && konsentratKg > 0) {
-            sKonsentrat.stokKg = Math.max(0, Math.round((sKonsentrat.stokKg - konsentratKg) * 10) / 10);
+        // 1. Kurangi / kembalikan Konsentrat
+        const sKonsentrat = stok.find(s => s.kategori === "Konsentrat" || (s.nama && s.nama.toLowerCase().includes("konsentrat")));
+        if (sKonsentrat && konsentratKg !== 0) {
+            sKonsentrat.stokKg = Math.max(0, Math.round(((sKonsentrat.stokKg || 0) - konsentratKg) * 10) / 10);
+            sKonsentrat.tglUpdate = today;
             changed = true;
         }
 
-        // 2. Kurangi Silase
-        const sSilase = stok.find(s => s.kategori === "Silase" || s.nama.toLowerCase().includes("silase"));
-        if (sSilase && silaseKg > 0) {
-            sSilase.stokKg = Math.max(0, Math.round((sSilase.stokKg - silaseKg) * 10) / 10);
+        // 2. Kurangi / kembalikan Silase
+        const sSilase = stok.find(s => s.kategori === "Silase" || (s.nama && s.nama.toLowerCase().includes("silase")));
+        if (sSilase && silaseKg !== 0) {
+            sSilase.stokKg = Math.max(0, Math.round(((sSilase.stokKg || 0) - silaseKg) * 10) / 10);
+            sSilase.tglUpdate = today;
             changed = true;
         }
 
-        // 3. Kurangi Hijauan Odot
-        const sHijauan = stok.find(s => s.kategori === "Hijauan" || s.nama.toLowerCase().includes("odot") || s.nama.toLowerCase().includes("hijauan"));
-        if (sHijauan && hijauanKg > 0) {
-            sHijauan.stokKg = Math.max(0, Math.round((sHijauan.stokKg - hijauanKg) * 10) / 10);
+        // 3. Kurangi / kembalikan Hijauan Odot
+        const sHijauan = stok.find(s => s.kategori === "Hijauan" || (s.nama && (s.nama.toLowerCase().includes("odot") || s.nama.toLowerCase().includes("hijauan"))));
+        if (sHijauan && hijauanKg !== 0) {
+            sHijauan.stokKg = Math.max(0, Math.round(((sHijauan.stokKg || 0) - hijauanKg) * 10) / 10);
+            sHijauan.tglUpdate = today;
             changed = true;
         }
 
@@ -1072,27 +1165,112 @@ const Store = {
             avgHij: Math.round(avgHij * 100) / 100
         };
     },
-    updateLogPakanHarian(idOrIdx, data) {
+    updateLogPakanHarian(idOrIdx, data, adjustStock = true) {
         const l = this.getLogPakanHarian();
         const i = typeof idOrIdx === 'number' ? idOrIdx : l.findIndex(p => p.id === idOrIdx);
         if (i >= 0 && i < l.length) {
-            l[i] = { ...l[i], ...data };
+            const old = l[i];
+            if (adjustStock) {
+                const newKons = data.konsentratKg !== undefined ? (parseFloat(data.konsentratKg) || 0) : (parseFloat(old.konsentratKg) || 0);
+                const newSil = data.silaseKg !== undefined ? (parseFloat(data.silaseKg) || 0) : (parseFloat(old.silaseKg) || 0);
+                const newHij = data.hijauanOdotKg !== undefined ? (parseFloat(data.hijauanOdotKg) || 0) : (parseFloat(old.hijauanOdotKg) || 0);
+                const diffKons = newKons - (parseFloat(old.konsentratKg) || 0);
+                const diffSil = newSil - (parseFloat(old.silaseKg) || 0);
+                const diffHij = newHij - (parseFloat(old.hijauanOdotKg) || 0);
+                this.deductStokPakanFromLog(diffKons, diffSil, diffHij);
+            }
+            l[i] = { ...old, ...data };
             this.saveLogPakanHarian(l);
             this.addLog("Update catatan pakan harian");
             return true;
         }
         return false;
     },
-    deleteLogPakanHarian(idOrIdx) {
+    deleteLogPakanHarian(idOrIdx, restoreStock = true) {
         let l = this.getLogPakanHarian();
-        if (typeof idOrIdx === 'string') {
-            l = l.filter(p => p.id !== idOrIdx);
-        } else if (typeof idOrIdx === 'number' && idOrIdx >= 0 && idOrIdx < l.length) {
-            l.splice(idOrIdx, 1);
+        const i = typeof idOrIdx === 'number' ? idOrIdx : l.findIndex(p => p.id === idOrIdx);
+        if (i >= 0 && i < l.length) {
+            const old = l[i];
+            if (restoreStock) {
+                this.deductStokPakanFromLog(-(parseFloat(old.konsentratKg) || 0), -(parseFloat(old.silaseKg) || 0), -(parseFloat(old.hijauanOdotKg) || 0));
+            }
+            l.splice(i, 1);
+            this.saveLogPakanHarian(l);
+            this.addLog("Hapus catatan pakan harian & kembalikan stok");
+            return true;
         }
-        this.saveLogPakanHarian(l);
-        this.addLog("Hapus catatan pakan harian");
-        return true;
+        return false;
+    },
+    upsertLogPakanHarian(log, adjustStock = true) {
+        const l = this.getLogPakanHarian();
+        let idx = -1;
+        // 1. Cek tabrakan berdasarkan ID spesifik jika diberikan
+        if (log.id && String(log.id).trim().length > 0) {
+            idx = l.findIndex(p => p.id === String(log.id).trim());
+        }
+        // 2. Jika tidak cocok via ID, cek tabrakan berdasarkan kombinasi Tanggal + Waktu + Kandang
+        if (idx === -1 && log.tgl && log.waktu && log.kandang) {
+            const cleanTgl = String(log.tgl).trim();
+            const cleanKandang = String(log.kandang).trim().toLowerCase();
+            const cleanWaktu = String(log.waktu).trim().toLowerCase();
+            idx = l.findIndex(p => 
+                p.tgl === cleanTgl && 
+                p.kandang && p.kandang.toLowerCase().trim() === cleanKandang && 
+                p.waktu && p.waktu.toLowerCase().trim() === cleanWaktu
+            );
+        }
+
+        const konsentratVal = parseFloat(log.konsentratKg) || 0;
+        const silaseVal = parseFloat(log.silaseKg) || 0;
+        const hijauanVal = parseFloat(log.hijauanOdotKg) || 0;
+        const u = this.getCurrentUser();
+        const petugasVal = (log.petugas && String(log.petugas).trim().length > 0) ? String(log.petugas).trim() : ((u && u.nama) ? u.nama : "Petugas");
+
+        if (idx >= 0) {
+            // TABRAKAN DITEMUKAN: AMBIL DATA TERBARU DARI SPREADSHEET
+            const old = l[idx];
+            if (adjustStock) {
+                const diffKons = konsentratVal - (parseFloat(old.konsentratKg) || 0);
+                const diffSil = silaseVal - (parseFloat(old.silaseKg) || 0);
+                const diffHij = hijauanVal - (parseFloat(old.hijauanOdotKg) || 0);
+                this.deductStokPakanFromLog(diffKons, diffSil, diffHij);
+            }
+            l[idx] = {
+                ...old,
+                tgl: log.tgl || old.tgl,
+                waktu: log.waktu || old.waktu,
+                kandang: log.kandang || old.kandang,
+                konsentratKg: konsentratVal,
+                silaseKg: silaseVal,
+                hijauanOdotKg: hijauanVal,
+                petugas: petugasVal,
+                catatan: log.catatan !== undefined ? String(log.catatan).trim() : old.catatan
+            };
+            this.saveLogPakanHarian(l);
+            this.addLog(`Update pakan (import terbaru): ${l[idx].kandang} (${l[idx].waktu})`);
+            return { action: "update", log: l[idx] };
+        } else {
+            // DATA BARU
+            const newId = log.id || ("fp-" + Date.now() + "-" + Math.floor(Math.random() * 10000));
+            const newLog = {
+                id: newId,
+                tgl: log.tgl,
+                waktu: log.waktu || "Pagi (07:30)",
+                kandang: log.kandang || "Kandang A",
+                konsentratKg: konsentratVal,
+                silaseKg: silaseVal,
+                hijauanOdotKg: hijauanVal,
+                petugas: petugasVal,
+                catatan: log.catatan ? String(log.catatan).trim() : "-"
+            };
+            l.unshift(newLog);
+            this.saveLogPakanHarian(l);
+            if (adjustStock) {
+                this.deductStokPakanFromLog(newLog.konsentratKg, newLog.silaseKg, newLog.hijauanOdotKg);
+            }
+            this.addLog(`Tambah pakan (import baru): ${newLog.kandang} (${newLog.waktu})`);
+            return { action: "insert", log: newLog };
+        }
     },
 
     // Stok Pakan
@@ -1232,6 +1410,76 @@ const Store = {
         this.saveDomba(list);
         this.addLog(`Hapus riwayat timbang ${d.eartag}: ${removed ? removed.bobot : ''} kg`);
         return true;
+    },
+
+    upsertRiwayatTimbang(dombaIdOrEartag, tgl, bobotBaru, catatan = "", petugas = "") {
+        const list = this.getDomba();
+        const key = String(dombaIdOrEartag || "").toLowerCase().trim();
+        const d = list.find(item => 
+            (item.id && item.id.toLowerCase() === key) || 
+            (item.eartag && item.eartag.toLowerCase() === key)
+        );
+        if (!d) return null;
+
+        if (!d.riwayatTimbang) d.riwayatTimbang = [];
+        const roundedWeight = parseFloat(parseFloat(bobotBaru).toFixed(2));
+        if (isNaN(roundedWeight) || roundedWeight <= 0) return null;
+
+        const cleanTgl = String(tgl || new Date().toISOString().split('T')[0]).trim();
+        const u = this.getCurrentUser();
+        const petVal = (petugas && String(petugas).trim().length > 0) ? String(petugas).trim() : ((u && u.nama) ? u.nama : "Petugas");
+
+        // Cek tabrakan: domba sama di tanggal yang sama
+        const existIdx = d.riwayatTimbang.findIndex(r => r.tgl === cleanTgl);
+        let action = "insert";
+
+        if (existIdx >= 0) {
+            // TABRAKAN DITEMUKAN: AMBIL DATA TERBARU DARI SPREADSHEET
+            d.riwayatTimbang[existIdx] = {
+                ...d.riwayatTimbang[existIdx],
+                tgl: cleanTgl,
+                bobot: roundedWeight,
+                catatan: catatan ? String(catatan).trim() : (d.riwayatTimbang[existIdx].catatan || "Penimbangan diperbarui"),
+                petugas: petVal
+            };
+            action = "update";
+        } else {
+            // DATA BARU
+            d.riwayatTimbang.push({
+                tgl: cleanTgl,
+                bobot: roundedWeight,
+                catatan: catatan ? String(catatan).trim() : "Penimbangan rutin",
+                petugas: petVal
+            });
+            action = "insert";
+        }
+
+        // Urutkan kronologis
+        d.riwayatTimbang.sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
+
+        // Update bobot terkini & awal
+        if (d.riwayatTimbang.length > 0) {
+            d.bobotAwal = d.riwayatTimbang[0].bobot;
+            d.bobotTerkini = d.riwayatTimbang[d.riwayatTimbang.length - 1].bobot;
+            d.berat = d.bobotTerkini;
+        }
+
+        // Hitung ulang ADG
+        if (d.riwayatTimbang.length >= 2) {
+            const last = d.riwayatTimbang[d.riwayatTimbang.length - 1];
+            const prev = d.riwayatTimbang[d.riwayatTimbang.length - 2];
+            const diffDays = Math.max(1, Math.round((new Date(last.tgl) - new Date(prev.tgl)) / (1000 * 60 * 60 * 24)));
+            const diffWeightKg = Math.round((last.bobot - prev.bobot) * 100) / 100;
+            d.adg = Math.round((diffWeightKg * 1000) / diffDays);
+        } else {
+            const diffDays = Math.max(1, Math.round((new Date(d.riwayatTimbang[0].tgl) - new Date(d.tglMasuk || d.riwayatTimbang[0].tgl)) / (1000 * 60 * 60 * 24)));
+            const diffWeightKg = Math.round((d.riwayatTimbang[0].bobot - (d.bobotAwal || d.riwayatTimbang[0].bobot)) * 100) / 100;
+            d.adg = Math.round((diffWeightKg * 1000) / diffDays);
+        }
+
+        this.saveDomba(list);
+        this.addLog(`${action === 'update' ? 'Update' : 'Catat'} timbang ${d.eartag}: ${roundedWeight.toFixed(2)} kg (ADG: ${d.adg} g/hari)`);
+        return { action, domba: d, adg: d.adg };
     },
 
     addRekamMedis(dombaId, record) {
@@ -1470,7 +1718,22 @@ const Store = {
     },
 
     // Bank Pakan HPT & Lahan Pertanian CRUD
-    getLahan() { return this.safeGet(STORAGE_KEYS.LAHAN, []); },
+    defaultLahanList() {
+        return [
+            { id: "lhn-1", nama: "Kebun HPT 1 (Rumput Odot)", lokasi: "Blok Selatan Kedaton", luasM2: 2500, komoditas: "Rumput Odot", tglTanam: "2025-01-10", tglPanenTerakhir: "2026-08-25", tglEstimasiPanen: "2026-10-05", estimasiHasilKg: 4500, status: "Fase Pertumbuhan Rumpun", pupukDigunakan: "Kompos Kohe Domba", keterangan: "Bank pakan utama." },
+            { id: "lhn-2", nama: "Kebun Legum (Indigofera & Gamal)", lokasi: "Blok Timur Kedaton", luasM2: 1800, komoditas: "Indigofera", tglTanam: "2024-11-20", tglPanenTerakhir: "2026-08-30", tglEstimasiPanen: "2026-09-28", estimasiHasilKg: 1800, status: "Siap Pangkas", pupukDigunakan: "POC Urin Domba", keterangan: "Sumber protein nabati tinggi." }
+        ];
+    },
+    getLahan() {
+        const raw = localStorage.getItem(STORAGE_KEYS.LAHAN);
+        const list = this.safeGet(STORAGE_KEYS.LAHAN, null);
+        if (raw === null || list === null || !Array.isArray(list) || list.length === 0) {
+            const defaults = this.defaultLahanList();
+            this.saveLahan(defaults);
+            return defaults;
+        }
+        return list;
+    },
     saveLahan(l) { localStorage.setItem(STORAGE_KEYS.LAHAN, JSON.stringify(l)); this.triggerAutoSync(); },
     addLahan(lahan) {
         const list = this.getLahan();
@@ -1559,7 +1822,22 @@ const Store = {
     addKoheHarian(k) { const l = this.getKoheHarian(); l.unshift(k); this.saveKoheHarian(l); },
     updateKoheHarian(idx, fields) { const l = this.getKoheHarian(); if (idx >= 0 && idx < l.length) { l[idx] = { ...l[idx], ...fields }; this.saveKoheHarian(l); this.addLog(`Update log kohe tgl ${fields.tgl || l[idx].tgl}`); } },
     deleteKoheHarian(idx) { const l = this.getKoheHarian(); if (idx >= 0 && idx < l.length) { l.splice(idx, 1); this.saveKoheHarian(l); } },
-    getBatchLimbah() { return this.safeGet(STORAGE_KEYS.BATCH_LIMBAH, []); },
+    defaultBatchLimbah() {
+        return [
+            { id: "B-POP-01", nama: "Kompos Kohe Domba Halus Batch 08", tipe: "Pupuk Organik Padat (POP)", kapasitas: 2500, outputKomposKg: 2500, satuan: "kg", tglMulai: "2026-08-15", tglEstimasiSelesai: "2026-09-18", suhuTerkini: 38, status: "Pengeringan & Ayak", dekomposer: "Trichoderma + EM4", campuran: "Feses 70%, Sekam 15%, Dolomit 5%", jadwalBalik: [{ hari: "Hari ke-7", tgl: "2026-08-22", selesai: true, suhu: 58 }], targetKemasan: "125 karung @20kg" },
+            { id: "B-POC-01", nama: "POC Urin Domba Plus Bio-Pestisida", tipe: "Pupuk Organik Cair (POC)", kapasitas: 600, outputKomposKg: 600, satuan: "Liter", tglMulai: "2026-08-20", tglEstimasiSelesai: "2026-09-15", suhuTerkini: 29, status: "Siap Panen & Kemas", dekomposer: "PSB + Molase", campuran: "Urin 500L, Molase 10L, Empon-empon 20kg", jadwalBalik: [{ hari: "Aerasi 1", tgl: "2026-08-27", selesai: true, suhu: 30 }], targetKemasan: "500 botol @1L" }
+        ];
+    },
+    getBatchLimbah() {
+        const raw = localStorage.getItem(STORAGE_KEYS.BATCH_LIMBAH);
+        const list = this.safeGet(STORAGE_KEYS.BATCH_LIMBAH, null);
+        if (raw === null || list === null || !Array.isArray(list) || list.length === 0) {
+            const defaults = this.defaultBatchLimbah();
+            this.saveBatchLimbah(defaults);
+            return defaults;
+        }
+        return list;
+    },
     saveBatchLimbah(b) { localStorage.setItem(STORAGE_KEYS.BATCH_LIMBAH, JSON.stringify(b)); this.triggerAutoSync(); },
     addBatchLimbah(b) {
         const l = this.getBatchLimbah();
@@ -1584,7 +1862,22 @@ const Store = {
         this.addLog(`Hapus batch fermentasi: ${id}`);
         return true;
     },
-    getStokPupuk() { return this.safeGet(STORAGE_KEYS.STOK_PUPUK, []); },
+    defaultStokPupuk() {
+        return [
+            { id: "pk-1", nama: "Pupuk Kompos Kohe Domba Halus (Karung 20kg)", tipe: "POP", stok: 145, beratKg: 20, satuan: "karung", hargaJual: 25000, terjualBulanIni: 85 },
+            { id: "pk-2", nama: "Pupuk Organik Cair Urin Domba Plus (Botol 1 Liter)", tipe: "POC", stok: 220, beratKg: 1, satuan: "botol", hargaJual: 18000, terjualBulanIni: 130 }
+        ];
+    },
+    getStokPupuk() {
+        const raw = localStorage.getItem(STORAGE_KEYS.STOK_PUPUK);
+        const list = this.safeGet(STORAGE_KEYS.STOK_PUPUK, null);
+        if (raw === null || list === null || !Array.isArray(list) || list.length === 0) {
+            const defaults = this.defaultStokPupuk();
+            this.saveStokPupuk(defaults);
+            return defaults;
+        }
+        return list;
+    },
     saveStokPupuk(p) { localStorage.setItem(STORAGE_KEYS.STOK_PUPUK, JSON.stringify(p)); this.triggerAutoSync(); },
     getTasks() { 
         const t = this.safeGet(STORAGE_KEYS.TASKS, null);
@@ -1739,6 +2032,10 @@ const Store = {
         return true;
     },
     getCurrentUser() { 
+        const authSess = this.safeGet("kandang_auth_session", null);
+        if (authSess && authSess.nama) {
+            return authSess;
+        }
         const u = this.safeGet(STORAGE_KEYS.CURRENT_USER, null);
         if (!u || !u.id || !u.nama) {
             const sdm = this.getSDM();
@@ -2241,12 +2538,8 @@ const Store = {
                     console.log(`[AutoSync] Pembaruan cloud terdeteksi (${cloudTime} != ${cfg.lastSyncTime}). Menyelaraskan data...`);
                     const pullRes = await this.pullFromFirebase();
                     if (pullRes && pullRes.success) {
-                        if (window.App) {
-                            if (window.App.currentView === "admin" && typeof window.App.renderContent === "function") {
-                                window.App.renderContent();
-                            } else if (window.App.currentView === "public" && window.PortalPublikModule) {
-                                window.PortalPublikModule.render();
-                            }
+                        if (window.App && typeof window.App.renderContent === "function") {
+                            window.App.renderContent();
                             if (typeof window.App.showToast === "function") {
                                 window.App.showToast("Data cloud otomatis disinkronkan ke perangkat ini! 🔄", "info");
                             }
@@ -2310,12 +2603,8 @@ const Store = {
                         this.importAll(cloudData);
                         cfg.lastSyncTime = cloudData.exportedAt;
                         this.saveFirebaseConfig(cfg);
-                        if (window.App) {
-                            if (window.App.currentView === "admin" && typeof window.App.renderContent === "function") {
-                                window.App.renderContent();
-                            } else if (window.App.currentView === "public" && window.PortalPublikModule) {
-                                window.PortalPublikModule.render();
-                            }
+                        if (window.App && typeof window.App.renderContent === "function") {
+                            window.App.renderContent();
                             if (typeof window.App.showToast === "function") {
                                 window.App.showToast("Data ternak & akun berhasil disinkronkan dari Cloud!", "info");
                             }
@@ -2333,12 +2622,8 @@ const Store = {
                                 this.importAll(cloudData);
                                 cfg.lastSyncTime = cloudData.exportedAt;
                                 this.saveFirebaseConfig(cfg);
-                                if (window.App) {
-                                    if (window.App.currentView === "admin" && typeof window.App.renderContent === "function") {
-                                        window.App.renderContent();
-                                    } else if (window.App.currentView === "public" && window.PortalPublikModule) {
-                                        window.PortalPublikModule.render();
-                                    }
+                                if (window.App && typeof window.App.renderContent === "function") {
+                                    window.App.renderContent();
                                     if (typeof window.App.showToast === "function") {
                                         window.App.showToast("Data ternak & akun berhasil disinkronkan dari Cloud!", "info");
                                     }

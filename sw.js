@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kandang-bumkal-v2.9.7';
+const CACHE_NAME = 'kandang-bumkal-v3.0.1';
 const STATIC_ASSETS = [
     './',
     './index.html',

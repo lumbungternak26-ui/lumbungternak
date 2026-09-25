@@ -682,6 +682,7 @@ const PenggemukanModule = {
                             <table class="w-full text-left text-xs border-collapse" id="preview-table">
                                 <thead class="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px]">
                                     <tr>
+                                        <th class="p-2 border-b">Status</th>
                                         <th class="p-2 border-b">Eartag</th>
                                         <th class="p-2 border-b">Warna Tag</th>
                                         <th class="p-2 border-b">Nama</th>
@@ -693,7 +694,7 @@ const PenggemukanModule = {
                                         <th class="p-2 border-b">Sekat</th>
                                         <th class="p-2 border-b">Bobot Awal</th>
                                         <th class="p-2 border-b">Harga Beli</th>
-                                        <th class="p-2 border-b">Status</th>
+                                        <th class="p-2 border-b">Status Ternak</th>
                                         <th class="p-2 border-b">Tanggal Masuk</th>
                                     </tr>
                                 </thead>
@@ -861,6 +862,18 @@ const PenggemukanModule = {
                 return;
             }
 
+            const currentDombaList = Store.getDomba ? Store.getDomba() : [];
+            let candidateUpdates = 0;
+            let candidateNews = 0;
+
+            parsedRows.forEach(r => {
+                const tag = (r.eartag || "").trim().toLowerCase();
+                const exists = currentDombaList.some(d => d.eartag && d.eartag.trim().toLowerCase() === tag);
+                r.isUpdate = exists;
+                if (exists) candidateUpdates++;
+                else candidateNews++;
+            });
+
             this.pendingImportData = parsedRows;
 
             // Render Preview
@@ -871,13 +884,24 @@ const PenggemukanModule = {
 
             if (previewArea && previewCount && tbody) {
                 previewArea.classList.remove("hidden");
-                previewCount.textContent = `${parsedRows.length} Data Ternak Siap Diimpor`;
-                previewDelim.textContent = `Pemisah Terdeteksi: ${delim === ';' ? 'Titik-Koma (;)' : delim === ',' ? 'Koma (,)' : 'Tab'}`;
+                previewCount.innerHTML = `<span>${parsedRows.length} Data Terbaca</span> <span class="text-amber-600 dark:text-amber-400 font-bold">(${candidateUpdates} Update Tabrakan</span> • <span class="text-emerald-600 dark:text-emerald-400 font-bold">${candidateNews} Baru)</span>`;
+                previewDelim.textContent = `Pemisah: ${delim === ';' ? 'Titik-Koma (;)' : delim === ',' ? 'Koma (,)' : 'Tab'}`;
 
                 const previewFive = parsedRows.slice(0, 5);
                 const defaultNow = new Date().toISOString().split("T")[0];
                 tbody.innerHTML = previewFive.map(d => `
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40">
+                        <td class="p-2">
+                            ${d.isUpdate ? `
+                                <span class="px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                                    Update Terbaru
+                                </span>
+                            ` : `
+                                <span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                                    Data Baru
+                                </span>
+                            `}
+                        </td>
                         <td class="p-2 font-bold text-emerald-600">${d.eartag}</td>
                         <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">${d.warnaEartag || 'Kuning'}</span></td>
                         <td class="p-2 font-semibold text-slate-800 dark:text-slate-200">${d.nama}</td>
@@ -907,41 +931,28 @@ const PenggemukanModule = {
             return;
         }
 
-        const existingList = Store.getDomba();
         let addedCount = 0;
-        const now = new Date().toISOString().split("T")[0];
+        let updatedCount = 0;
 
-        this.pendingImportData.forEach((row, idx) => {
-            const initialWeight = parseFloat(Number(row.bobotAwal || 0).toFixed(2));
-            const newD = {
-                id: "dmb-imp-" + Date.now() + "-" + idx,
-                eartag: row.eartag,
-                warnaEartag: row.warnaEartag || "Kuning",
-                nama: row.nama,
-                ras: row.ras,
-                asalTernak: row.asalTernak || "Peternak Lokal Pleret",
-                kelamin: row.kelamin,
-                kategori: row.kategori,
-                kandang: row.kandang,
-                sekat: row.sekat,
-                bobotAwal: initialWeight,
-                hargaBeli: row.hargaBeli,
-                status: row.status,
-                tglLahir: "2025-01-01",
-                tglMasuk: row.tglMasuk || now,
-                adg: 0,
-                foto: "https://images.unsplash.com/photo-1484557052118-f32bd25b45b5?auto=format&fit=crop&w=600&q=80",
-                riwayatTimbang: [{ tgl: row.tglMasuk || now, bobot: initialWeight, catatan: "Import Berkas Spreadsheet" }],
-                rekamMedis: [],
-                riwayatKawin: []
-            };
-            existingList.unshift(newD);
-            addedCount++;
+        this.pendingImportData.forEach((row) => {
+            const res = Store.upsertDomba(row);
+            if (res && res.action === "update") {
+                updatedCount++;
+            } else {
+                addedCount++;
+            }
         });
 
-        Store.saveDomba(existingList);
         this.pendingImportData = [];
-        App.showToast(`Sukses mengimpor ${addedCount} data ternak dengan kolom terpisah rapi!`, "success");
+        let msg = "";
+        if (updatedCount > 0 && addedCount > 0) {
+            msg = `Sukses import: ${addedCount} domba baru & ${updatedCount} data tabrakan diperbarui ke data terbaru!`;
+        } else if (updatedCount > 0) {
+            msg = `Sukses memperbarui ${updatedCount} data domba yang tabrakan dengan data terbaru!`;
+        } else {
+            msg = `Sukses mengimpor ${addedCount} data ternak baru!`;
+        }
+        App.showToast(msg, "success");
         setTimeout(() => {
             App.navigate("data_ternak");
         }, 600);

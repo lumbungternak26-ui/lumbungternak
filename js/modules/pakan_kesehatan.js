@@ -38,6 +38,8 @@ const PakanKesehatanModule = {
     // 1. INPUT PAKAN HARIAN
     renderInputPakanHarian() {
         let logPakan = Store.getLogPakanHarian();
+        const masterKandang = Store.getMasterKandang ? Store.getMasterKandang() : [];
+        const kandangOptions = masterKandang.length > 0 ? masterKandang.map(k => k.nama) : ["Kandang A", "Kandang B", "Kandang C"];
 
         // Filter & Search
         if (this.pakanSearchQuery) {
@@ -63,9 +65,14 @@ const PakanKesehatanModule = {
                         <h2 class="text-xl font-bold text-slate-900 dark:text-white">Pemberian Pakan Harian</h2>
                         <p class="text-xs text-slate-500">Pencatatan konsumsi konsentrat, silase jagung fermentasi, dan hijauan rumput odot per kandang.</p>
                     </div>
-                    <button onclick="PakanKesehatanModule.openModalCatatPakan()" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-teal-600 hover:bg-teal-700 text-white shadow-md transition active:scale-95">
-                        <i data-lucide="plus-circle" class="w-4 h-4"></i> Catat Pakan Hari Ini
-                    </button>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="PakanKesehatanModule.openModalImportPakan()" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border border-teal-500 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-950/50 shadow-sm transition active:scale-95 cursor-pointer">
+                            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Import Masal Pakan
+                        </button>
+                        <button onclick="PakanKesehatanModule.openModalCatatPakan()" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-teal-600 hover:bg-teal-700 text-white shadow-md transition active:scale-95 cursor-pointer">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> Catat Pakan Hari Ini
+                        </button>
+                    </div>
                 </div>
 
                 <!-- FILTER BAR -->
@@ -86,9 +93,9 @@ const PakanKesehatanModule = {
                             class="py-2 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none"
                         >
                             <option value="all" ${this.pakanFilterKandang === 'all' ? 'selected' : ''}>Semua Kandang</option>
-                            <option value="Kandang A" ${this.pakanFilterKandang === 'Kandang A' ? 'selected' : ''}>Kandang A</option>
-                            <option value="Kandang B" ${this.pakanFilterKandang === 'Kandang B' ? 'selected' : ''}>Kandang B</option>
-                            <option value="Kandang C" ${this.pakanFilterKandang === 'Kandang C' ? 'selected' : ''}>Kandang C</option>
+                            ${kandangOptions.map(k => `
+                                <option value="${k}" ${this.pakanFilterKandang === k ? 'selected' : ''}>${k}</option>
+                            `).join('')}
                         </select>
                         ${(this.pakanSearchQuery || this.pakanFilterKandang !== 'all') ? `
                             <button onclick="PakanKesehatanModule.resetFilterPakan()" class="text-xs text-rose-600 hover:underline whitespace-nowrap">
@@ -103,7 +110,13 @@ const PakanKesehatanModule = {
                         <h3 class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                             <i data-lucide="clipboard-list" class="w-4 h-4 text-teal-600"></i> Log Distribusi Pakan Kandang
                         </h3>
-                        <span class="text-xs text-slate-500">${logPakan.length} Catatan</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="ExportImport.openExportModal('pakan')" class="text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1 cursor-pointer">
+                                <i data-lucide="download" class="w-3.5 h-3.5"></i> Ekspor Log
+                            </button>
+                            <span class="text-slate-300 dark:text-slate-600">•</span>
+                            <span class="text-xs text-slate-500">${logPakan.length} Catatan</span>
+                        </div>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -387,7 +400,9 @@ const PakanKesehatanModule = {
                                     <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-900/30">
                                         <td class="py-3 px-4 font-bold text-slate-800 dark:text-slate-200">
                                             ${s.nama}
-                                            <div class="text-[10px] text-slate-400 font-normal">ID: ${s.id}</div>
+                                            <div class="text-[10px] text-slate-400 font-normal">
+                                                📅 Update: <span class="font-semibold text-slate-600 dark:text-slate-300">${s.tglUpdate || s.tglMasuk || 'Terdaftar'}</span> • ID: ${s.id}
+                                            </div>
                                         </td>
                                         <td class="py-3 px-4">${s.kategori}</td>
                                         <td class="py-3 px-4 text-right font-black text-emerald-600 text-sm">${(s.stokKg || 0).toLocaleString('id-ID')} ${s.satuan || 'kg'}</td>
@@ -542,9 +557,11 @@ const PakanKesehatanModule = {
 
     openModalCatatPakan() {
         const stokList = Store.getStokPakan();
-        const stokK = stokList.find(s => s.kategori.toLowerCase() === 'konsentrat') || { stokKg: 0 };
-        const stokS = stokList.find(s => s.kategori.toLowerCase() === 'silase') || { stokKg: 0 };
-        const stokH = stokList.find(s => s.kategori.toLowerCase() === 'hijauan') || { stokKg: 0 };
+        const stokK = stokList.find(s => (s.kategori && s.kategori.toLowerCase() === 'konsentrat') || (s.nama && s.nama.toLowerCase().includes('konsentrat'))) || { nama: 'Konsentrat', stokKg: 0, satuan: 'kg' };
+        const stokS = stokList.find(s => (s.kategori && s.kategori.toLowerCase() === 'silase') || (s.nama && s.nama.toLowerCase().includes('silase'))) || { nama: 'Silase Tebon Jagung', stokKg: 0, satuan: 'kg' };
+        const stokH = stokList.find(s => (s.kategori && s.kategori.toLowerCase() === 'hijauan') || (s.nama && (s.nama.toLowerCase().includes('odot') || s.nama.toLowerCase().includes('hijauan')))) || { nama: 'Hijauan Odot', stokKg: 0, satuan: 'kg' };
+        const masterKandang = Store.getMasterKandang ? Store.getMasterKandang() : [];
+        const currentUser = Store.getCurrentUser ? Store.getCurrentUser() : { nama: "Petugas" };
 
         App.setModalContent(`
             <div class="p-5 md:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
@@ -572,9 +589,13 @@ const PakanKesehatanModule = {
                         <div>
                             <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">🏠 Kandang Alokasi *</label>
                             <select id="pk-kandang" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold focus:ring-2 focus:ring-teal-500 outline-none">
-                                <option value="Kandang A">Kandang A (Pejantan & Fattening)</option>
-                                <option value="Kandang B">Kandang B (Indukan & Breeding)</option>
-                                <option value="Kandang C">Kandang C (Karantina / Pemulihan)</option>
+                                ${masterKandang.length > 0 ? masterKandang.map(k => `
+                                    <option value="${k.nama}">${k.nama} (${k.tipe || k.kategori || 'Kandang'}) • Terisi: ${k.terisi || 0} ekor</option>
+                                `).join('') : `
+                                    <option value="Kandang A">Kandang A (Pejantan & Fattening)</option>
+                                    <option value="Kandang B">Kandang B (Indukan & Breeding)</option>
+                                    <option value="Kandang C">Kandang C (Karantina / Pemulihan)</option>
+                                `}
                             </select>
                         </div>
 
@@ -609,11 +630,11 @@ const PakanKesehatanModule = {
                             <!-- KARTU 1: KONSENTRAT -->
                             <div class="p-3.5 rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/40 dark:bg-amber-950/20 space-y-2.5">
                                 <div class="flex items-center justify-between">
-                                    <span class="font-bold text-slate-800 dark:text-amber-300 flex items-center gap-1.5">
-                                        🌾 Konsentrat
+                                    <span class="font-bold text-slate-800 dark:text-amber-300 flex items-center gap-1.5 truncate" title="${stokK.nama}">
+                                        🌾 ${stokK.nama || 'Konsentrat'}
                                     </span>
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${stokK.stokKg < 50 ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200'}">
-                                        Stok: ${stokK.stokKg.toLocaleString('id-ID')} kg
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${stokK.stokKg < 50 ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200'} whitespace-nowrap">
+                                        Stok: ${Number(stokK.stokKg || 0).toLocaleString('id-ID')} kg
                                     </span>
                                 </div>
                                 <div class="relative">
@@ -630,11 +651,11 @@ const PakanKesehatanModule = {
                             <!-- KARTU 2: SILASE -->
                             <div class="p-3.5 rounded-2xl border border-sky-200 dark:border-sky-800/60 bg-sky-50/40 dark:bg-sky-950/20 space-y-2.5">
                                 <div class="flex items-center justify-between">
-                                    <span class="font-bold text-slate-800 dark:text-sky-300 flex items-center gap-1.5">
-                                        🌽 Silase Jagung
+                                    <span class="font-bold text-slate-800 dark:text-sky-300 flex items-center gap-1.5 truncate" title="${stokS.nama}">
+                                        🌽 ${stokS.nama || 'Silase Jagung'}
                                     </span>
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${stokS.stokKg < 100 ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300' : 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200'}">
-                                        Stok: ${stokS.stokKg.toLocaleString('id-ID')} kg
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${stokS.stokKg < 100 ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300' : 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200'} whitespace-nowrap">
+                                        Stok: ${Number(stokS.stokKg || 0).toLocaleString('id-ID')} kg
                                     </span>
                                 </div>
                                 <div class="relative">
@@ -651,11 +672,11 @@ const PakanKesehatanModule = {
                             <!-- KARTU 3: HIJAUAN ODOT -->
                             <div class="p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/40 dark:bg-emerald-950/20 space-y-2.5">
                                 <div class="flex items-center justify-between">
-                                    <span class="font-bold text-slate-800 dark:text-emerald-300 flex items-center gap-1.5">
-                                        🌿 Hijauan Odot
+                                    <span class="font-bold text-slate-800 dark:text-emerald-300 flex items-center gap-1.5 truncate" title="${stokH.nama}">
+                                        🌿 ${stokH.nama || 'Hijauan Odot'}
                                     </span>
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${stokH.stokKg < 100 ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200'}">
-                                        Stok: ${stokH.stokKg.toLocaleString('id-ID')} kg
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${stokH.stokKg < 100 ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200'} whitespace-nowrap">
+                                        Stok: ${Number(stokH.stokKg || 0).toLocaleString('id-ID')} kg
                                     </span>
                                 </div>
                                 <div class="relative">
@@ -667,6 +688,19 @@ const PakanKesehatanModule = {
                                     <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('pk-odot', 1, 'pk-')" class="flex-1 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 text-xs shadow-sm cursor-pointer">+1</button>
                                     <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('pk-odot', 5, 'pk-')" class="flex-1 py-1 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 text-xs shadow-sm cursor-pointer">+5</button>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- BANNER CEK SISA STOK GUDANG TERKINI -->
+                        <div class="mt-2.5 p-2.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                            <div class="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+                                <i data-lucide="package-check" class="w-3.5 h-3.5 text-teal-600"></i>
+                                <span>Status Sisa Stok Gudang Realtime:</span>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-semibold">Konsentrat: ${(stokK.stokKg || 0).toLocaleString('id-ID')} kg</span>
+                                <span class="px-2 py-0.5 rounded bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 font-semibold">Silase: ${(stokS.stokKg || 0).toLocaleString('id-ID')} kg</span>
+                                <span class="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-semibold">Hijauan: ${(stokH.stokKg || 0).toLocaleString('id-ID')} kg</span>
                             </div>
                         </div>
                     </div>
@@ -685,9 +719,21 @@ const PakanKesehatanModule = {
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">📝 Catatan Respon Pakan / Kondisi Palung</label>
-                        <input type="text" id="pk-catatan" value="Nafsu makan baik, air minum ad-libitum bersih" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-teal-500 outline-none">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">👤 Petugas Pakan (Otomatis User Login) *</label>
+                            <div class="relative">
+                                <input type="text" id="pk-petugas" value="${currentUser.nama || ''}" required class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-bold focus:ring-2 focus:ring-teal-500 outline-none">
+                                <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-700">
+                                    Akun Aktif
+                                </span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">📝 Catatan Respon Pakan</label>
+                            <input type="text" id="pk-catatan" value="Nafsu makan baik, air minum ad-libitum bersih" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-teal-500 outline-none">
+                        </div>
                     </div>
 
                     <div class="pt-3 flex justify-end gap-2.5 border-t dark:border-slate-700">
@@ -705,6 +751,11 @@ const PakanKesehatanModule = {
 
     submitPakan(e) {
         e.preventDefault();
+        const user = Store.getCurrentUser ? Store.getCurrentUser() : null;
+        const userNama = (user && user.nama) ? user.nama : "Petugas";
+        const inputPetugas = document.getElementById("pk-petugas") ? document.getElementById("pk-petugas").value.trim() : "";
+        const petugasFinal = inputPetugas || userNama;
+
         const newLog = {
             id: "fp-" + Date.now(),
             tgl: document.getElementById("pk-tgl").value,
@@ -713,7 +764,7 @@ const PakanKesehatanModule = {
             konsentratKg: parseFloat(document.getElementById("pk-konsentrat").value) || 0,
             silaseKg: parseFloat(document.getElementById("pk-silase").value) || 0,
             hijauanOdotKg: parseFloat(document.getElementById("pk-odot").value) || 0,
-            petugas: Store.getCurrentUser().nama || "Wahyu Pratama",
+            petugas: petugasFinal,
             catatan: document.getElementById("pk-catatan").value.trim() || "-"
         };
 
@@ -776,6 +827,11 @@ const PakanKesehatanModule = {
                 </div>
 
                 <form onsubmit="PakanKesehatanModule.submitTambahPakan(event)" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal Pasokan / Masuk *</label>
+                        <input type="date" id="npk-tgl" required value="${new Date().toISOString().split('T')[0]}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
+                    </div>
+
                     <div>
                         <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Pilih Tindakan *</label>
                         <select id="npk-mode" onchange="PakanKesehatanModule.onPakanModeChange(this.value)" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
@@ -842,6 +898,7 @@ const PakanKesehatanModule = {
 
     submitTambahPakan(e) {
         e.preventDefault();
+        const tgl = document.getElementById("npk-tgl").value || new Date().toISOString().split('T')[0];
         const mode = document.getElementById("npk-mode").value;
         const jumlah = parseFloat(document.getElementById("npk-jumlah").value) || 0;
         const stokList = Store.getStokPakan();
@@ -851,9 +908,10 @@ const PakanKesehatanModule = {
             const item = stokList.find(s => s.id === id);
             if (item) {
                 item.stokKg += jumlah;
+                item.tglUpdate = tgl;
                 Store.saveStokPakan(stokList);
-                Store.addLog(`Restok pakan: +${jumlah} kg ${item.nama}`);
-                App.showToast(`Restok ${item.nama} (+${jumlah} kg) berhasil!`, "success");
+                Store.addLog(`Restok pakan (${tgl}): +${jumlah} kg ${item.nama}`);
+                App.showToast(`Restok ${item.nama} (+${jumlah} kg) pada ${tgl} berhasil!`, "success");
             }
         } else {
             const nama = document.getElementById("npk-nama").value.trim() || "Bahan Pakan Tambahan";
@@ -866,11 +924,13 @@ const PakanKesehatanModule = {
                 stokKg: jumlah,
                 satuan: "kg",
                 batasMinimum: 200,
-                biayaPerKg: biaya
+                biayaPerKg: biaya,
+                tglMasuk: tgl,
+                tglUpdate: tgl
             });
             Store.saveStokPakan(stokList);
-            Store.addLog(`Tambah bahan pakan baru: ${nama} (${jumlah} kg)`);
-            App.showToast(`Bahan pakan baru "${nama}" berhasil ditambahkan!`, "success");
+            Store.addLog(`Tambah bahan pakan baru (${tgl}): ${nama} (${jumlah} kg)`);
+            App.showToast(`Bahan pakan baru "${nama}" pada ${tgl} berhasil ditambahkan!`, "success");
         }
 
         App.closeModal();
@@ -974,9 +1034,10 @@ const PakanKesehatanModule = {
         if (!log) return;
 
         const stokList = Store.getStokPakan();
-        const stokK = stokList.find(s => s.kategori.toLowerCase() === 'konsentrat') || { stokKg: 0 };
-        const stokS = stokList.find(s => s.kategori.toLowerCase() === 'silase') || { stokKg: 0 };
-        const stokH = stokList.find(s => s.kategori.toLowerCase() === 'hijauan') || { stokKg: 0 };
+        const stokK = stokList.find(s => (s.kategori && s.kategori.toLowerCase() === 'konsentrat') || (s.nama && s.nama.toLowerCase().includes('konsentrat'))) || { nama: 'Konsentrat', stokKg: 0, satuan: 'kg' };
+        const stokS = stokList.find(s => (s.kategori && s.kategori.toLowerCase() === 'silase') || (s.nama && s.nama.toLowerCase().includes('silase'))) || { nama: 'Silase Tebon Jagung', stokKg: 0, satuan: 'kg' };
+        const stokH = stokList.find(s => (s.kategori && s.kategori.toLowerCase() === 'hijauan') || (s.nama && (s.nama.toLowerCase().includes('odot') || s.nama.toLowerCase().includes('hijauan')))) || { nama: 'Hijauan Odot', stokKg: 0, satuan: 'kg' };
+        const masterKandang = Store.getMasterKandang ? Store.getMasterKandang() : [];
 
         const totalPakan = ((log.konsentratKg || 0) + (log.silaseKg || 0) + (log.hijauanOdotKg || 0)).toFixed(1);
 
@@ -1006,9 +1067,13 @@ const PakanKesehatanModule = {
                         <div>
                             <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">🏠 Kandang Alokasi *</label>
                             <select id="epk-kandang" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold focus:ring-2 focus:ring-amber-500 outline-none">
-                                <option value="Kandang A" ${log.kandang === 'Kandang A' ? 'selected' : ''}>Kandang A (Pejantan & Fattening)</option>
-                                <option value="Kandang B" ${log.kandang === 'Kandang B' ? 'selected' : ''}>Kandang B (Indukan & Breeding)</option>
-                                <option value="Kandang C" ${log.kandang === 'Kandang C' ? 'selected' : ''}>Kandang C (Karantina / Pemulihan)</option>
+                                ${masterKandang.length > 0 ? masterKandang.map(k => `
+                                    <option value="${k.nama}" ${log.kandang === k.nama || (log.kandang && log.kandang.includes(k.nama)) ? 'selected' : ''}>${k.nama} (${k.tipe || k.kategori || 'Kandang'}) • Terisi: ${k.terisi || 0} ekor</option>
+                                `).join('') : `
+                                    <option value="Kandang A" ${log.kandang === 'Kandang A' ? 'selected' : ''}>Kandang A (Pejantan & Fattening)</option>
+                                    <option value="Kandang B" ${log.kandang === 'Kandang B' ? 'selected' : ''}>Kandang B (Indukan & Breeding)</option>
+                                    <option value="Kandang C" ${log.kandang === 'Kandang C' ? 'selected' : ''}>Kandang C (Karantina / Pemulihan)</option>
+                                `}
                             </select>
                         </div>
 
@@ -1035,7 +1100,7 @@ const PakanKesehatanModule = {
                     <!-- 3 KARTU VISUAL PAKAN -->
                     <div>
                         <div class="flex items-center justify-between mb-2">
-                            <label class="font-bold text-slate-800 dark:text-white text-xs uppercase tracking-wider">Takaran Pakan (kg)</label>
+                            <label class="font-bold text-slate-800 dark:text-white text-xs uppercase tracking-wider">Takaran Pakan (kg) & Cek Sisa Stok</label>
                             <span class="text-[11px] text-amber-600 dark:text-amber-400 font-medium">💡 Gunakan tombol - / + untuk atur cepat</span>
                         </div>
 
@@ -1043,11 +1108,11 @@ const PakanKesehatanModule = {
                             <!-- KARTU 1: KONSENTRAT -->
                             <div class="p-3.5 rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/40 dark:bg-amber-950/20 space-y-2.5">
                                 <div class="flex items-center justify-between">
-                                    <span class="font-bold text-slate-800 dark:text-amber-300 flex items-center gap-1.5">
-                                        🌾 Konsentrat
+                                    <span class="font-bold text-slate-800 dark:text-amber-300 flex items-center gap-1.5 truncate" title="${stokK.nama}">
+                                        🌾 ${stokK.nama || 'Konsentrat'}
                                     </span>
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
-                                        Stok: ${stokK.stokKg.toLocaleString('id-ID')} kg
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200 whitespace-nowrap">
+                                        Stok: ${Number(stokK.stokKg || 0).toLocaleString('id-ID')} kg
                                     </span>
                                 </div>
                                 <div class="relative">
@@ -1064,11 +1129,11 @@ const PakanKesehatanModule = {
                             <!-- KARTU 2: SILASE -->
                             <div class="p-3.5 rounded-2xl border border-sky-200 dark:border-sky-800/60 bg-sky-50/40 dark:bg-sky-950/20 space-y-2.5">
                                 <div class="flex items-center justify-between">
-                                    <span class="font-bold text-slate-800 dark:text-sky-300 flex items-center gap-1.5">
-                                        🌽 Silase Jagung
+                                    <span class="font-bold text-slate-800 dark:text-sky-300 flex items-center gap-1.5 truncate" title="${stokS.nama}">
+                                        🌽 ${stokS.nama || 'Silase Jagung'}
                                     </span>
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200">
-                                        Stok: ${stokS.stokKg.toLocaleString('id-ID')} kg
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200 whitespace-nowrap">
+                                        Stok: ${Number(stokS.stokKg || 0).toLocaleString('id-ID')} kg
                                     </span>
                                 </div>
                                 <div class="relative">
@@ -1085,11 +1150,11 @@ const PakanKesehatanModule = {
                             <!-- KARTU 3: HIJAUAN ODOT -->
                             <div class="p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/40 dark:bg-emerald-950/20 space-y-2.5">
                                 <div class="flex items-center justify-between">
-                                    <span class="font-bold text-slate-800 dark:text-emerald-300 flex items-center gap-1.5">
-                                        🌿 Hijauan Odot
+                                    <span class="font-bold text-slate-800 dark:text-emerald-300 flex items-center gap-1.5 truncate" title="${stokH.nama}">
+                                        🌿 ${stokH.nama || 'Hijauan Odot'}
                                     </span>
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200">
-                                        Stok: ${stokH.stokKg.toLocaleString('id-ID')} kg
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200 whitespace-nowrap">
+                                        Stok: ${Number(stokH.stokKg || 0).toLocaleString('id-ID')} kg
                                     </span>
                                 </div>
                                 <div class="relative">
@@ -1101,6 +1166,19 @@ const PakanKesehatanModule = {
                                     <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('epk-odot', 1, 'epk-')" class="flex-1 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-100 text-xs shadow-sm cursor-pointer">+1</button>
                                     <button type="button" onclick="PakanKesehatanModule.adjustPakanQty('epk-odot', 5, 'epk-')" class="flex-1 py-1 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 text-xs shadow-sm cursor-pointer">+5</button>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- BANNER CEK SISA STOK GUDANG TERKINI -->
+                        <div class="mt-2.5 p-2.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                            <div class="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+                                <i data-lucide="package-check" class="w-3.5 h-3.5 text-amber-500"></i>
+                                <span>Status Sisa Stok Gudang Realtime:</span>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-semibold">Konsentrat: ${(stokK.stokKg || 0).toLocaleString('id-ID')} kg</span>
+                                <span class="px-2 py-0.5 rounded bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 font-semibold">Silase: ${(stokS.stokKg || 0).toLocaleString('id-ID')} kg</span>
+                                <span class="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-semibold">Hijauan: ${(stokH.stokKg || 0).toLocaleString('id-ID')} kg</span>
                             </div>
                         </div>
                     </div>
@@ -1122,7 +1200,7 @@ const PakanKesehatanModule = {
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">👤 Petugas Pakan *</label>
-                            <input type="text" id="epk-petugas" required value="${log.petugas || ''}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500 outline-none">
+                            <input type="text" id="epk-petugas" required value="${log.petugas || (Store.getCurrentUser ? Store.getCurrentUser().nama : '')}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500 outline-none">
                         </div>
                         <div>
                             <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">📝 Catatan Respon Ternak</label>
@@ -1249,6 +1327,10 @@ const PakanKesehatanModule = {
 
                 <form onsubmit="PakanKesehatanModule.submitEditStokPakan(event, '${item.id}')" class="space-y-3 text-xs">
                     <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal Pembaruan Terakhir *</label>
+                        <input type="date" id="estk-tgl" required value="${item.tglUpdate || item.tglMasuk || new Date().toISOString().split('T')[0]}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
+                    </div>
+                    <div>
                         <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Nama Bahan Pakan *</label>
                         <input type="text" id="estk-nama" required value="${item.nama}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
                     </div>
@@ -1294,18 +1376,20 @@ const PakanKesehatanModule = {
 
     submitEditStokPakan(e, id) {
         e.preventDefault();
+        const tgl = document.getElementById("estk-tgl").value || new Date().toISOString().split('T')[0];
         const updated = {
             nama: document.getElementById("estk-nama").value.trim(),
             kategori: document.getElementById("estk-kategori").value,
             satuan: document.getElementById("estk-satuan").value.trim() || "kg",
             stokKg: parseFloat(document.getElementById("estk-stok").value) || 0,
             batasMinimum: parseFloat(document.getElementById("estk-min").value) || 200,
-            biayaPerKg: parseFloat(document.getElementById("estk-biaya").value) || 0
+            biayaPerKg: parseFloat(document.getElementById("estk-biaya").value) || 0,
+            tglUpdate: tgl
         };
 
         Store.updateStokPakan(id, updated);
         App.closeModal();
-        App.showToast("Bahan pakan berhasil diperbarui!", "success");
+        App.showToast(`Bahan pakan berhasil diperbarui (Tanggal: ${tgl})!`, "success");
         App.renderContent();
     },
 
@@ -1320,6 +1404,10 @@ const PakanKesehatanModule = {
                 </div>
 
                 <form onsubmit="PakanKesehatanModule.submitKomoditasBaru(event)" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal Masuk / Pencatatan *</label>
+                        <input type="date" id="nkb-tgl" required value="${new Date().toISOString().split('T')[0]}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
+                    </div>
                     <div>
                         <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Nama Komoditas Bahan Pakan *</label>
                         <input type="text" id="nkb-nama" required placeholder="Contoh: Konsentrat Penggemukan Booster / Silase Jagung" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
@@ -1369,6 +1457,7 @@ const PakanKesehatanModule = {
 
     submitKomoditasBaru(e) {
         e.preventDefault();
+        const tgl = document.getElementById("nkb-tgl").value || new Date().toISOString().split('T')[0];
         const nama = document.getElementById("nkb-nama").value.trim();
         const kategori = document.getElementById("nkb-kategori").value;
         const satuan = document.getElementById("nkb-satuan").value.trim() || "kg";
@@ -1383,15 +1472,17 @@ const PakanKesehatanModule = {
             stokKg,
             satuan,
             batasMinimum,
-            biayaPerKg
+            biayaPerKg,
+            tglMasuk: tgl,
+            tglUpdate: tgl
         };
 
         const stokList = Store.getStokPakan();
         stokList.push(newItem);
         Store.saveStokPakan(stokList);
-        Store.addLog(`Tambah komoditas pakan baru: ${nama} (${stokKg} ${satuan})`);
+        Store.addLog(`Tambah komoditas pakan baru (${tgl}): ${nama} (${stokKg} ${satuan})`);
         App.closeModal();
-        App.showToast(`Komoditas "${nama}" berhasil didaftarkan ke gudang pakan!`, "success");
+        App.showToast(`Komoditas "${nama}" pada ${tgl} berhasil didaftarkan ke gudang pakan!`, "success");
         App.renderContent();
     },
 
@@ -1415,6 +1506,11 @@ const PakanKesehatanModule = {
                             <span>Kategori: <b>${item.kategori}</b></span>
                             <span>Sisa Stok Saat Ini: <b class="text-emerald-600">${(item.stokKg || 0).toLocaleString('id-ID')} ${item.satuan || 'kg'}</b></span>
                         </div>
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tanggal Pemakaian / Pengeluaran *</label>
+                        <input type="date" id="kstk-tgl" required value="${new Date().toISOString().split('T')[0]}" class="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold">
                     </div>
 
                     <div>
@@ -1447,6 +1543,7 @@ const PakanKesehatanModule = {
 
     submitKurangStok(e, id) {
         e.preventDefault();
+        const tgl = document.getElementById("kstk-tgl").value || new Date().toISOString().split('T')[0];
         const jumlah = parseFloat(document.getElementById("kstk-jumlah").value) || 0;
         const alasan = document.getElementById("kstk-alasan").value;
         const catatan = document.getElementById("kstk-catatan").value.trim();
@@ -1456,21 +1553,23 @@ const PakanKesehatanModule = {
         if (!item) return;
 
         item.stokKg = Math.max(0, (item.stokKg || 0) - jumlah);
+        item.tglUpdate = tgl;
         Store.saveStokPakan(stokList);
-        Store.addLog(`Pengurangan stok ${item.nama}: -${jumlah} ${item.satuan} (${alasan}${catatan ? ' - ' + catatan : ''})`);
+        Store.addLog(`Pengurangan stok (${tgl}) ${item.nama}: -${jumlah} ${item.satuan} (${alasan}${catatan ? ' - ' + catatan : ''})`);
 
         App.closeModal();
-        App.showToast(`Stok ${item.nama} berkurang ${jumlah} ${item.satuan}. Sisa: ${item.stokKg} ${item.satuan}`, "info");
+        App.showToast(`Stok ${item.nama} berkurang ${jumlah} ${item.satuan} (${tgl}). Sisa: ${item.stokKg} ${item.satuan}`, "info");
         App.renderContent();
     },
 
     muatPakanStandar() {
+        const today = new Date().toISOString().split('T')[0];
         const standar = [
-            { id: "stk-1", nama: "Konsentrat Penggemukan (PK 16%)", kategori: "Konsentrat", stokKg: 1250, satuan: "kg", batasMinimum: 300, biayaPerKg: 4200 },
-            { id: "stk-2", nama: "Silase Tebon Jagung Fermentasi", kategori: "Silase", stokKg: 3400, satuan: "kg", batasMinimum: 800, biayaPerKg: 1200 },
-            { id: "stk-3", nama: "Silase Jerami Padi EM4", kategori: "Silase", stokKg: 1800, satuan: "kg", batasMinimum: 500, biayaPerKg: 800 },
-            { id: "stk-4", nama: "Hijauan Segar Odot/Pakchong", kategori: "Hijauan", stokKg: 650, satuan: "kg", batasMinimum: 200, biayaPerKg: 400 },
-            { id: "stk-5", nama: "Mineral Blok & Garam Beryodium", kategori: "Suplemen", stokKg: 85, satuan: "kg", batasMinimum: 20, biayaPerKg: 15000 }
+            { id: "stk-1", nama: "Konsentrat Penggemukan (PK 16%)", kategori: "Konsentrat", stokKg: 1250, satuan: "kg", batasMinimum: 300, biayaPerKg: 4200, tglMasuk: today, tglUpdate: today },
+            { id: "stk-2", nama: "Silase Tebon Jagung Fermentasi", kategori: "Silase", stokKg: 3400, satuan: "kg", batasMinimum: 800, biayaPerKg: 1200, tglMasuk: today, tglUpdate: today },
+            { id: "stk-3", nama: "Silase Jerami Padi EM4", kategori: "Silase", stokKg: 1800, satuan: "kg", batasMinimum: 500, biayaPerKg: 800, tglMasuk: today, tglUpdate: today },
+            { id: "stk-4", nama: "Hijauan Segar Odot/Pakchong", kategori: "Hijauan", stokKg: 650, satuan: "kg", batasMinimum: 200, biayaPerKg: 400, tglMasuk: today, tglUpdate: today },
+            { id: "stk-5", nama: "Mineral Blok & Garam Beryodium", kategori: "Suplemen", stokKg: 85, satuan: "kg", batasMinimum: 20, biayaPerKg: 15000, tglMasuk: today, tglUpdate: today }
         ];
         Store.saveStokPakan(standar);
         Store.addLog("Memuat 5 komoditas bahan pakan standar pabrik.");
@@ -1579,5 +1678,403 @@ const PakanKesehatanModule = {
             App.showToast("Rekam medis telah dihapus.", "success");
             App.renderContent();
         }
+    },
+
+    // 6. IMPORT MASAL & UPDATE LOG PAKAN HARIAN (ANTI-TABRAKAN)
+    downloadTemplatePakanExcel() {
+        const currentUser = Store.getCurrentUser ? Store.getCurrentUser() : { nama: "Petugas" };
+        const masterKandang = Store.getMasterKandang ? Store.getMasterKandang() : [];
+        const k1 = masterKandang[0]?.nama || "Kandang A";
+        const k2 = masterKandang[1]?.nama || "Kandang B";
+        const today = new Date().toISOString().split('T')[0];
+        const stokList = Store.getStokPakan();
+        const stokSummary = stokList.map(s => `${s.nama}: ${s.stokKg} ${s.satuan}`).join(" | ");
+
+        const headers = ["ID_Log", "Tanggal", "Waktu", "Kandang", "Konsentrat_kg", "Silase_kg", "Hijauan_Odot_kg", "Petugas", "Catatan"];
+        const rows = [
+            ["fp-01", today, "Pagi (07:30)", k1, "8.5", "15.0", "20.0", currentUser.nama || "Petugas", "Nafsu makan tinggi, pakan habis"],
+            ["fp-02", today, "Pagi (08:00)", k2, "5.0", "10.0", "25.0", currentUser.nama || "Petugas", "Indukan laktasi diberi pakan ekstra"],
+            ["", today, "Siang (12:00)", k1, "4.0", "8.0", "12.0", "", "Pemberian pakan siang (otomatis mengurangi stok gudang)"]
+        ];
+        ExportImport.exportExcelTable("template_import_pakan_bumkal", headers, rows, `Template Import & Update Masal Pakan Harian (Sisa Stok Gudang: ${stokSummary})`, "Template_Pakan");
+    },
+
+    downloadTemplatePakanCSV() {
+        const currentUser = Store.getCurrentUser ? Store.getCurrentUser() : { nama: "Petugas" };
+        const pet = currentUser.nama || "Petugas";
+        const masterKandang = Store.getMasterKandang ? Store.getMasterKandang() : [];
+        const k1 = masterKandang[0]?.nama || "Kandang A";
+        const k2 = masterKandang[1]?.nama || "Kandang B";
+        const today = new Date().toISOString().split('T')[0];
+        const stokList = Store.getStokPakan();
+        const stokSummary = stokList.map(s => `${s.nama}: ${s.stokKg} ${s.satuan}`).join(" | ");
+
+        const note = `# STOK GUDANG TERKINI: ${stokSummary}\r\n`;
+        const header = "ID_Log;Tanggal;Waktu;Kandang;Konsentrat_kg;Silase_kg;Hijauan_Odot_kg;Petugas;Catatan\r\n";
+        const sample1 = `fp-01;${today};Pagi (07:30);${k1};8.5;15.0;20.0;${pet};Nafsu makan tinggi, pakan habis\r\n`;
+        const sample2 = `fp-02;${today};Pagi (08:00);${k2};5.0;10.0;25.0;${pet};Indukan laktasi ekstra\r\n`;
+        const sample3 = `;${today};Siang (12:00);${k1};4.0;8.0;12.0;;Pemberian pakan siang (otomatis kurangi stok)\r\n`;
+        const blob = new Blob(["\uFEFF" + note + header + sample1 + sample2 + sample3], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "template_import_pakan_excel_windows.csv";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        App.showToast("Template CSV Titik-Koma (;) Pakan Harian berhasil diunduh!", "success");
+    },
+
+    openModalImportPakan() {
+        const currentUser = Store.getCurrentUser ? Store.getCurrentUser() : { nama: "Petugas" };
+        const stokList = Store.getStokPakan();
+        this.pendingPakanImportData = [];
+
+        App.setModalContent(`
+            <div class="p-5 md:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between border-b pb-3 dark:border-slate-700">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+                            <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 dark:text-white">Import Masal & Update Log Pakan Harian</h3>
+                            <p class="text-xs text-slate-500">Unggah puluhan log pakan sekaligus dari spreadsheet (Excel / CSV)</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="App.closeModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+
+                <!-- MONITOR SISA STOK GUDANG REALTIME -->
+                <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                            <i data-lucide="package-search" class="w-4 h-4 text-teal-600"></i>
+                            Stok Pakan Terkini di Gudang (Otomatis Dikurangi Saat Upload)
+                        </span>
+                        <span class="text-[11px] text-teal-600 dark:text-teal-400 font-bold">Sinkronisasi Otomatis</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                        ${stokList.map(s => `
+                            <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 space-y-0.5">
+                                <div class="text-[10px] text-slate-400 font-semibold truncate" title="${s.nama}">${s.nama}</div>
+                                <div class="font-black text-sm text-teal-700 dark:text-teal-300">${(s.stokKg || 0).toLocaleString('id-ID')} ${s.satuan || 'kg'}</div>
+                                <div class="text-[9px] ${s.stokKg > (s.batasMinimum || 200) ? 'text-emerald-600' : 'text-rose-500 font-bold'}">
+                                    ${s.stokKg > (s.batasMinimum || 200) ? '● Stok Cukup' : '⚠️ Re-stok Diperlukan'}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- PANDUAN PENTING & ANTI-TABRAKAN -->
+                <div class="p-3.5 rounded-2xl bg-teal-50/70 dark:bg-teal-950/30 border border-teal-200/80 dark:border-teal-800 space-y-2 text-xs">
+                    <div class="flex items-start gap-2">
+                        <div class="p-1 rounded-lg bg-teal-600 text-white font-bold shrink-0 mt-0.5">
+                            <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                        </div>
+                        <div class="space-y-1 text-slate-700 dark:text-slate-300 leading-relaxed">
+                            <p><b>Fitur Cerdas Anti-Tabrakan & Pengurangan Stok Otomatis:</b></p>
+                            <ul class="list-disc list-inside space-y-0.5 text-[11px] text-slate-600 dark:text-slate-400">
+                                <li>Setiap catatan konsumsi pakan yang diunggah akan <b>langsung memotong persediaan stok pakan di gudang</b> secara realtime.</li>
+                                <li>Jika baris memiliki <b>ID_Log</b> yang sama ATAU kombinasi <b>Tanggal + Waktu + Kandang</b> yang sama dengan data di sistem, sistem otomatis <b>mengambil data terbaru dari spreadsheet</b> dan memperbarui catatan lama serta menyesuaikan selisih stoknya.</li>
+                                <li>Jika kolom <b>Petugas</b> dikosongkan, sistem otomatis mencatat nama user login Anda saat ini: <b class="text-teal-700 dark:text-teal-300">${currentUser.nama || 'Petugas'}</b>.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DOWNLOAD TEMPLATE BUTTONS -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" onclick="PakanKesehatanModule.downloadTemplatePakanExcel()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition active:scale-95 cursor-pointer">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Unduh Template Excel (.xls)
+                    </button>
+                    <button type="button" onclick="PakanKesehatanModule.downloadTemplatePakanCSV()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition cursor-pointer">
+                        <i data-lucide="file-text" class="w-4 h-4 text-blue-600"></i> Template CSV Titik-Koma (;)
+                    </button>
+                    <button type="button" onclick="ExportImport.openExportModal('pakan')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 transition cursor-pointer">
+                        <i data-lucide="download" class="w-4 h-4"></i> Ekspor Data Pakan Saat Ini (.xls)
+                    </button>
+                </div>
+
+                <!-- FILE INPUT AREA -->
+                <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-4 bg-slate-50 dark:bg-slate-900/40 text-center space-y-2">
+                    <i data-lucide="upload-cloud" class="w-8 h-8 mx-auto text-teal-600"></i>
+                    <div class="text-xs font-bold text-slate-800 dark:text-slate-200">Pilih File Spreadsheet Pakan (.csv atau .txt)</div>
+                    <p class="text-[11px] text-slate-400">Otomatis mendeteksi pemisah Titik-Koma (;), Koma (,), atau Tab.</p>
+                    <input type="file" id="pakan-csv-upload-input" accept=".csv,.txt" onchange="PakanKesehatanModule.previewPakanCSV(this)" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-teal-600 file:text-white hover:file:bg-teal-700 cursor-pointer">
+                </div>
+
+                <!-- PREVIEW CONTAINER -->
+                <div id="pakan-import-preview-area" class="hidden space-y-3 pt-2">
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-200">
+                            <i data-lucide="check-circle" class="w-4 h-4 text-teal-600"></i>
+                            <span id="pakan-preview-count-label">0 Data Siap Diimpor</span>
+                            <span id="pakan-preview-delim-label" class="px-2 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">Pemisah: ;</span>
+                        </div>
+                        <span class="text-[11px] text-slate-400">Pratinjau Data</span>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 max-h-60 overflow-y-auto">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead class="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] sticky top-0 z-10">
+                                <tr>
+                                    <th class="p-2 border-b">Status</th>
+                                    <th class="p-2 border-b">ID Log</th>
+                                    <th class="p-2 border-b">Tanggal & Waktu</th>
+                                    <th class="p-2 border-b">Kandang</th>
+                                    <th class="p-2 border-b text-right">Konsentrat</th>
+                                    <th class="p-2 border-b text-right">Silase</th>
+                                    <th class="p-2 border-b text-right">Hijauan Odot</th>
+                                    <th class="p-2 border-b">Petugas</th>
+                                    <th class="p-2 border-b">Catatan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pakan-preview-tbody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+                        </table>
+                    </div>
+
+                    <button type="button" onclick="PakanKesehatanModule.confirmImportPakanData()" class="w-full py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2 active:scale-95 cursor-pointer">
+                        <i data-lucide="database" class="w-4 h-4"></i> Konfirmasi & Simpan / Update Log Pakan ke Database
+                    </button>
+                </div>
+            </div>
+        `);
+        App.openModal();
+        if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+    },
+
+    parseCSVLine(line, delim) {
+        const result = [];
+        let cur = "";
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+                if (inQuotes && line[i + 1] === '"') {
+                    cur += '"';
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === delim && !inQuotes) {
+                result.push(cur.trim());
+                cur = "";
+            } else {
+                cur += char;
+            }
+        }
+        result.push(cur.trim());
+        return result;
+    },
+
+    previewPakanCSV(input) {
+        if (!input || !input.files[0]) return;
+        const file = input.files[0];
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            const text = e.target.result;
+            let lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+            if (lines.length === 0) {
+                App.showToast("File kosong!", "error");
+                return;
+            }
+
+            if (lines[0].toLowerCase().startsWith("sep=")) {
+                lines.shift();
+            }
+
+            if (lines.length <= 1) {
+                App.showToast("File hanya memiliki baris header tanpa baris data!", "error");
+                return;
+            }
+
+            // Deteksi Delimiter
+            const headerLine = lines[0];
+            const semiCount = (headerLine.match(/;/g) || []).length;
+            const commaCount = (headerLine.match(/,/g) || []).length;
+            const tabCount = (headerLine.match(/\t/g) || []).length;
+
+            let delim = ";";
+            if (tabCount > semiCount && tabCount > commaCount) delim = "\t";
+            else if (commaCount > semiCount) delim = ",";
+
+            const parseDateInput = (val) => {
+                if (!val) return new Date().toISOString().split("T")[0];
+                val = val.trim();
+                const dmy = val.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+                if (dmy) {
+                    return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
+                }
+                const ymd = val.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+                if (ymd) {
+                    return `${ymd[1]}-${ymd[2].padStart(2, "0")}-${ymd[3].padStart(2, "0")}`;
+                }
+                return val;
+            };
+
+            const parseKg = (val) => {
+                if (!val) return 0;
+                const clean = String(val).replace(',', '.').replace(/[^0-9.]/g, '');
+                const num = parseFloat(clean);
+                return isNaN(num) ? 0 : parseFloat(num.toFixed(1));
+            };
+
+            const existingLogs = Store.getLogPakanHarian ? Store.getLogPakanHarian() : [];
+            const currentUser = Store.getCurrentUser ? Store.getCurrentUser() : { nama: "Petugas" };
+            const defaultUser = currentUser.nama || "Petugas";
+
+            const parsedRows = [];
+            let updateCandidateCount = 0;
+            let newCandidateCount = 0;
+
+            for (let i = 1; i < lines.length; i++) {
+                const cols = this.parseCSVLine(lines[i], delim);
+                if (cols.length >= 4) {
+                    let idVal = "";
+                    let tglVal = "";
+                    let waktuVal = "Pagi (07:30)";
+                    let kandangVal = "Kandang A";
+                    let konsVal = 0;
+                    let silVal = 0;
+                    let hijVal = 0;
+                    let petVal = "";
+                    let catVal = "-";
+
+                    // Format: ID_Log; Tanggal; Waktu; Kandang; Konsentrat_kg; Silase_kg; Hijauan_Odot_kg; Petugas; Catatan
+                    if (cols.length >= 7) {
+                        idVal = cols[0];
+                        tglVal = parseDateInput(cols[1]);
+                        waktuVal = cols[2] || "Pagi (07:30)";
+                        kandangVal = cols[3] || "Kandang A";
+                        konsVal = parseKg(cols[4]);
+                        silVal = parseKg(cols[5]);
+                        hijVal = parseKg(cols[6]);
+                        petVal = cols[7] ? cols[7].trim() : defaultUser;
+                        catVal = cols[8] ? cols[8].trim() : "-";
+                    } else {
+                        tglVal = parseDateInput(cols[0]);
+                        waktuVal = cols[1] || "Pagi (07:30)";
+                        kandangVal = cols[2] || "Kandang A";
+                        konsVal = parseKg(cols[3]);
+                        silVal = parseKg(cols[4]);
+                        hijVal = parseKg(cols[5]);
+                        petVal = defaultUser;
+                    }
+
+                    if (!petVal) petVal = defaultUser;
+
+                    // Cek tabrakan
+                    let isCollision = false;
+                    if (idVal && existingLogs.some(p => p.id === idVal)) {
+                        isCollision = true;
+                    } else if (existingLogs.some(p => p.tgl === tglVal && p.kandang.toLowerCase().trim() === kandangVal.toLowerCase().trim() && p.waktu.toLowerCase().trim() === waktuVal.toLowerCase().trim())) {
+                        isCollision = true;
+                    }
+
+                    if (isCollision) updateCandidateCount++;
+                    else newCandidateCount++;
+
+                    parsedRows.push({
+                        id: idVal,
+                        tgl: tglVal,
+                        waktu: waktuVal,
+                        kandang: kandangVal,
+                        konsentratKg: konsVal,
+                        silaseKg: silVal,
+                        hijauanOdotKg: hijVal,
+                        petugas: petVal,
+                        catatan: catVal,
+                        isUpdate: isCollision
+                    });
+                }
+            }
+
+            if (parsedRows.length === 0) {
+                App.showToast("Gagal membaca baris pakan. Periksa struktur kolom!", "error");
+                return;
+            }
+
+            this.pendingPakanImportData = parsedRows;
+
+            // Render Preview
+            const previewArea = document.getElementById("pakan-import-preview-area");
+            const previewCount = document.getElementById("pakan-preview-count-label");
+            const previewDelim = document.getElementById("pakan-preview-delim-label");
+            const tbody = document.getElementById("pakan-preview-tbody");
+
+            if (previewArea && previewCount && tbody) {
+                previewArea.classList.remove("hidden");
+                previewCount.innerHTML = `<span>${parsedRows.length} Log Pakan Terbaca</span> <span class="text-amber-600 dark:text-amber-400 font-bold">(${updateCandidateCount} Update Tabrakan</span> • <span class="text-teal-600 dark:text-teal-400 font-bold">${newCandidateCount} Baru)</span>`;
+                previewDelim.textContent = `Pemisah: ${delim === ';' ? 'Titik-Koma (;)' : delim === ',' ? 'Koma (,)' : 'Tab'}`;
+
+                tbody.innerHTML = parsedRows.map(d => `
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/40">
+                        <td class="p-2">
+                            ${d.isUpdate ? `
+                                <span class="px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800 whitespace-nowrap">
+                                    Update Terbaru
+                                </span>
+                            ` : `
+                                <span class="px-2 py-0.5 rounded text-[10px] font-black bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 border border-teal-300 dark:border-teal-800 whitespace-nowrap">
+                                    Data Baru
+                                </span>
+                            `}
+                        </td>
+                        <td class="p-2 font-mono text-[11px] text-slate-500">${d.id || '-'}</td>
+                        <td class="p-2 font-semibold text-slate-800 dark:text-slate-200">
+                            <div>${d.tgl}</div>
+                            <span class="text-[10px] text-slate-400 font-normal">${d.waktu}</span>
+                        </td>
+                        <td class="p-2 font-bold text-teal-700 dark:text-teal-400">${d.kandang}</td>
+                        <td class="p-2 text-right font-bold text-slate-900 dark:text-white">${d.konsentratKg} kg</td>
+                        <td class="p-2 text-right font-bold text-slate-900 dark:text-white">${d.silaseKg} kg</td>
+                        <td class="p-2 text-right font-bold text-emerald-600 dark:text-emerald-400">${d.hijauanOdotKg} kg</td>
+                        <td class="p-2 text-slate-600 dark:text-slate-400 font-medium">${d.petugas}</td>
+                        <td class="p-2 text-slate-500 italic max-w-xs truncate">${d.catatan}</td>
+                    </tr>
+                `).join('');
+
+                if (window.lucide) window.lucide.createIcons();
+            }
+        };
+
+        reader.readAsText(file);
+    },
+
+    confirmImportPakanData() {
+        if (!this.pendingPakanImportData || this.pendingPakanImportData.length === 0) {
+            App.showToast("Tidak ada data pakan untuk diimpor!", "error");
+            return;
+        }
+
+        let addedCount = 0;
+        let updatedCount = 0;
+
+        this.pendingPakanImportData.forEach((row) => {
+            const res = Store.upsertLogPakanHarian(row, true);
+            if (res && res.action === "update") {
+                updatedCount++;
+            } else {
+                addedCount++;
+            }
+        });
+
+        this.pendingPakanImportData = [];
+        App.closeModal();
+
+        let msg = "";
+        if (updatedCount > 0 && addedCount > 0) {
+            msg = `Sukses import: ${addedCount} log pakan baru & ${updatedCount} log tabrakan diperbarui dengan data terbaru!`;
+        } else if (updatedCount > 0) {
+            msg = `Sukses memperbarui ${updatedCount} log pakan yang tabrakan dengan data terbaru!`;
+        } else {
+            msg = `Sukses mengimpor ${addedCount} log pakan baru!`;
+        }
+        App.showToast(msg, "success");
+        App.renderContent();
     }
 };

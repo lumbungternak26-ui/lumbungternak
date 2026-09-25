@@ -27,22 +27,48 @@ const PortalPublikModule = {
         const availableDomba = dombaList.filter(d => d.status !== "Mati" && d.status !== "Terjual");
         const stokPupuk = Store.getStokPupuk();
         const lahanList = Store.getLahan();
+        const limbahBatches = Store.getBatchLimbah ? Store.getBatchLimbah() : [];
         const valuasi = Store.hitungValuasiAsetBiologis();
 
-        // Hitung metrik dinamis HPT tersinkronisasi dengan panel pengurus
-        const totalLuasLahan = (lahanList || []).reduce((acc, l) => acc + (l.luasM2 || 0), 0);
+        // 1. Luas Kebun Bank Pakan HPT (sinkron dengan Pertanian & Dashboard)
+        const totalLuasLahan = (lahanList || []).reduce((acc, l) => acc + (Number(l.luasM2) || 0), 0);
         const luasHptDisplay = totalLuasLahan > 0 ? `${totalLuasLahan.toLocaleString('id-ID')} m²` : '0 m²';
         const plotHptCount = (lahanList || []).length;
 
-        // Hitung rata-rata ADG dari domba aktif tersinkronisasi dengan panel pengurus
+        // 2. Rata-rata ADG Harian (sinkron dengan Dashboard, Penggemukan & Timbang Cepat)
         const dombaWithAdg = availableDomba.filter(d => typeof d.adg === 'number' && d.adg > 0);
-        const avgAdg = dombaWithAdg.length > 0 
-            ? Math.round(dombaWithAdg.reduce((acc, d) => acc + d.adg, 0) / dombaWithAdg.length) 
-            : 0;
+        let avgAdg = 0;
+        if (dombaWithAdg.length > 0) {
+            avgAdg = Math.round(dombaWithAdg.reduce((acc, d) => acc + d.adg, 0) / dombaWithAdg.length);
+        } else if (cfg.targetADGMinimumGram) {
+            avgAdg = cfg.targetADGMinimumGram;
+        }
 
-        // Hitung total pupuk kompos dari stok riil
-        const totalKomposKg = (stokPupuk || []).reduce((acc, p) => acc + (p.stokKg || 0), 0);
-        const komposDisplay = totalKomposKg > 0 ? `${(totalKomposKg / 1000).toFixed(1)} Ton` : '4.5 Ton';
+        // 3. Total Kompos Halus Diproduksi (sinkron dengan Batch Pengolahan Limbah & Stok Pupuk Pengurus)
+        const batchKomposKg = (limbahBatches || []).reduce((acc, b) => {
+            const isPadat = (b.tipe && (b.tipe.includes('POP') || b.tipe.includes('Padat') || b.tipe.includes('Kompos'))) || (b.nama && b.nama.toLowerCase().includes('kompos'));
+            return acc + (isPadat ? (Number(b.outputKomposKg) || Number(b.kapasitas) || 0) : 0);
+        }, 0);
+        const stokKomposKg = (stokPupuk || []).filter(p => p.tipe === 'POP' || (p.nama && p.nama.toLowerCase().includes('kompos'))).reduce((acc, p) => {
+            const kgPerUnit = p.beratKg || (p.satuan === 'karung' ? 20 : 1);
+            return acc + ((Number(p.stok) || 0) * kgPerUnit);
+        }, 0);
+        const totalKomposKg = Math.max(batchKomposKg, stokKomposKg);
+        const komposDisplay = totalKomposKg >= 1000 
+            ? `${(totalKomposKg / 1000).toFixed(1)} Ton` 
+            : (totalKomposKg > 0 ? `${totalKomposKg} kg` : (cfg.totalKapasitasLimbahTon ? `${cfg.totalKapasitasLimbahTon} Ton` : '0 kg'));
+
+        // 4. Daftar unik Ras & Kategori dinamis dari database pengurus
+        const rasSet = new Set();
+        availableDomba.forEach(d => { if (d.ras) rasSet.add(d.ras.trim()); });
+        if (Array.isArray(cfg.rasTernakList)) {
+            cfg.rasTernakList.forEach(r => { if (r.nama) rasSet.add(r.nama.trim()); });
+        }
+        const rasList = Array.from(rasSet).sort();
+
+        const kategoriSet = new Set();
+        availableDomba.forEach(d => { if (d.kategori) kategoriSet.add(d.kategori.trim()); });
+        const kategoriList = Array.from(kategoriSet).sort();
 
         // Filter domba berdasarkan Ras, Kategori, dan Rentang Berat Badan
         let filteredDomba = availableDomba;
@@ -138,9 +164,9 @@ const PortalPublikModule = {
                         <div class="w-10 h-10 mx-auto rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 flex items-center justify-center mb-2">
                             <i data-lucide="trending-up" class="w-5 h-5"></i>
                         </div>
-                        <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">${avgAdg > 0 ? '+' + avgAdg + ' g/hr' : '-'}</div>
+                        <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">${avgAdg > 0 ? '+' + avgAdg + ' g/hr' : (cfg.targetADGMinimumGram ? '+' + cfg.targetADGMinimumGram + ' g/hr' : '0 g/hr')}</div>
                         <div class="text-xs font-bold text-blue-600 dark:text-blue-400 mt-0.5">Rata-rata ADG Harian</div>
-                        <p class="text-[11px] text-slate-400 mt-1">${avgAdg > 0 ? 'Laju penggemukan optimal' : 'Pencatatan bertahap'}</p>
+                        <p class="text-[11px] text-slate-400 mt-1">${dombaWithAdg.length > 0 ? 'Laju penggemukan riil' : 'Target pertumbuhan harian'}</p>
                     </div>
 
                     <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm text-center">
@@ -185,18 +211,13 @@ const PortalPublikModule = {
                             <!-- Filter Ras -->
                             <select onchange="PortalPublikModule.filterRas(this.value)" class="text-xs font-semibold px-2.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200">
                                 <option value="all">Semua Ras</option>
-                                <option value="Dorper" ${this.selectedRasFilter === 'Dorper' ? 'selected' : ''}>Dorper Cross</option>
-                                <option value="Garut" ${this.selectedRasFilter === 'Garut' ? 'selected' : ''}>Garut Tangkas</option>
-                                <option value="Texel" ${this.selectedRasFilter === 'Texel' ? 'selected' : ''}>Texel Wonosobo</option>
-                                <option value="Morada" ${this.selectedRasFilter === 'Morada' ? 'selected' : ''}>Morada Cross</option>
+                                ${rasList.map(r => `<option value="${r}" ${this.selectedRasFilter.toLowerCase() === r.toLowerCase() ? 'selected' : ''}>${r}</option>`).join('')}
                             </select>
 
                             <!-- Filter Kategori -->
                             <select onchange="PortalPublikModule.filterKategori(this.value)" class="text-xs font-semibold px-2.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200">
                                 <option value="all">Semua Kategori</option>
-                                <option value="Pejantan" ${this.selectedKategoriFilter === 'Pejantan' ? 'selected' : ''}>Pejantan</option>
-                                <option value="Indukan" ${this.selectedKategoriFilter === 'Indukan' ? 'selected' : ''}>Indukan</option>
-                                <option value="Fattening" ${this.selectedKategoriFilter === 'Fattening' ? 'selected' : ''}>Fattening</option>
+                                ${kategoriList.map(k => `<option value="${k}" ${this.selectedKategoriFilter.toLowerCase() === k.toLowerCase() ? 'selected' : ''}>${k}</option>`).join('')}
                             </select>
 
                             <!-- Filter Berat Badan -->

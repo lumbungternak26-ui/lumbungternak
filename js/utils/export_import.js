@@ -136,6 +136,7 @@ const ExportImport = {
             keuangan: "Buku Kas & Transaksi BUMDes",
             limbah: "Data Pengolahan Kohe & Pupuk",
             pakan: "Inventaris Stok Pakan & HPP",
+            timbang: "Riwayat Data Penimbangan & ADG Domba",
             laporan: "Laporan Resmi Terpilih"
         };
         const title = customTitle || typeLabels[type] || "Ekspor Data";
@@ -268,6 +269,40 @@ const ExportImport = {
                 l.tglEstimasiSelesai,
                 l.status
             ]);
+        } else if (type === "pakan") {
+            title = "Log Distribusi Pakan Harian & Nutrisi Kandang";
+            headers = ["ID_Log", "Tanggal", "Waktu", "Kandang", "Konsentrat_kg", "Silase_kg", "Hijauan_Odot_kg", "Petugas", "Catatan"];
+            rows = Store.getLogPakanHarian().map(p => [
+                p.id,
+                p.tgl,
+                p.waktu,
+                p.kandang,
+                p.konsentratKg,
+                p.silaseKg,
+                p.hijauanOdotKg,
+                p.petugas,
+                p.catatan || "-"
+            ]);
+        } else if (type === "timbang") {
+            title = "Riwayat Penimbangan & Pertumbuhan Bobot Domba";
+            headers = ["Eartag", "Nama_Domba", "Ras", "Kandang", "Tanggal_Timbang", "Bobot_kg", "ADG_g_hari", "Petugas", "Catatan"];
+            rows = [];
+            Store.getDomba().forEach(d => {
+                (d.riwayatTimbang || []).forEach(r => {
+                    rows.push([
+                        d.eartag || d.id,
+                        d.nama || "-",
+                        d.ras || "-",
+                        d.kandang || "-",
+                        r.tgl,
+                        r.bobot,
+                        d.adg || 0,
+                        r.petugas || "-",
+                        r.catatan || "-"
+                    ]);
+                });
+            });
+            rows.sort((a, b) => new Date(b[4]) - new Date(a[4]));
         }
 
         if (format === "excel") {
